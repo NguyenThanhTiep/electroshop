@@ -1,0 +1,526 @@
+.history-page {
+  min-height: 100vh;
+  padding: 34px 40px 70px;
+  background: #f5f7fb;
+}
+
+.history-container {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.history-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.history-breadcrumb {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.history-heading h1 {
+  margin: 10px 0 7px;
+  color: #172033;
+  font-size: 34px;
+}
+
+.history-heading p {
+  margin: 0;
+  color: #64748b;
+}
+
+.history-refresh-btn {
+  min-width: 110px;
+  padding: 11px 17px;
+  border: 1px solid #d7dce5;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #172033;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.history-refresh-btn:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.history-refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* THÔNG BÁO ĐẶT HÀNG THÀNH CÔNG */
+
+.order-success-message {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px 1fr 34px;
+  gap: 14px;
+  align-items: flex-start;
+
+  margin-bottom: 24px;
+  padding: 18px;
+
+  border: 1px solid #86efac;
+  border-radius: 14px;
+
+  background: #f0fdf4;
+  color: #166534;
+
+  box-shadow: 0 8px 24px rgba(22, 101, 52, 0.08);
+}
+
+.order-success-icon {
+  width: 48px;
+  height: 48px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  background: #22c55e;
+  color: #ffffff;
+
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.order-success-message strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 17px;
+}
+
+.order-success-message p {
+  margin: 0 0 5px;
+}
+
+.order-success-message p b {
+  color: #14532d;
+}
+
+.order-success-message span {
+  color: #15803d;
+  font-size: 13px;
+}
+
+.order-success-close {
+  width: 32px;
+  height: 32px;
+
+  display: grid;
+  place-items: center;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+  color: #166534;
+
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.order-success-close:hover {
+  background: #dcfce7;
+}
+
+/* DANH SÁCH ĐƠN HÀNG */
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.history-card {
+  overflow: hidden;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+
+  background: #ffffff;
+
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.history-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+
+  padding: 20px;
+
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafbfc;
+}
+
+.history-card-header > div > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.history-card-header h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.history-card-body {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.history-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.history-info-row > span:first-child {
+  flex: 0 0 125px;
+  color: #64748b;
+}
+
+.history-info-row strong {
+  color: #172033;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.history-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+
+  padding: 17px 20px;
+
+  border-top: 1px solid #e5e7eb;
+  background: #fffafa;
+}
+
+.history-card-footer span {
+  color: #475569;
+  font-weight: 700;
+}
+
+.history-card-footer strong {
+  color: #dc2626;
+  font-size: 21px;
+}
+
+/* BADGE TRẠNG THÁI */
+
+.order-status-badge,
+.payment-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.order-status-badge.pending-confirmation,
+.order-status-badge.waiting-payment,
+.payment-status-badge.unpaid,
+.payment-status-badge.processing {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.order-status-badge.confirmed,
+.order-status-badge.preparing {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.order-status-badge.shipping {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.order-status-badge.delivered,
+.order-status-badge.completed,
+.payment-status-badge.paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.order-status-badge.cancelled,
+.payment-status-badge.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.payment-status-badge.refunded {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+/* LOADING, EMPTY, ERROR */
+
+.history-loading,
+.history-empty {
+  display: grid;
+  place-items: center;
+
+  min-height: 300px;
+  padding: 40px;
+
+  box-sizing: border-box;
+  border-radius: 18px;
+
+  background: #ffffff;
+  text-align: center;
+}
+
+.history-spinner {
+  width: 42px;
+  height: 42px;
+
+  border: 4px solid #e5e7eb;
+  border-top-color: #dc2626;
+  border-radius: 50%;
+
+  animation: history-spin 0.8s linear infinite;
+}
+
+@keyframes history-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.history-empty-icon {
+  font-size: 55px;
+}
+
+.history-empty h2 {
+  margin-bottom: 8px;
+  color: #172033;
+}
+
+.history-empty p {
+  color: #64748b;
+}
+
+.history-empty button,
+.history-error-message button {
+  margin-top: 14px;
+  padding: 11px 18px;
+
+  border: none;
+  border-radius: 9px;
+
+  background: #dc2626;
+  color: #ffffff;
+
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.history-error-message {
+  margin-bottom: 22px;
+  padding: 17px;
+
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.history-error-message strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.history-error-message p {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .history-page {
+    padding: 28px 20px 60px;
+  }
+
+  .history-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .history-page {
+    padding: 22px 14px 50px;
+  }
+
+  .history-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-heading h1 {
+    font-size: 27px;
+  }
+
+  .history-refresh-btn {
+    width: 100%;
+  }
+
+  .order-success-message {
+    grid-template-columns: 42px 1fr 30px;
+    padding: 14px;
+  }
+
+  .order-success-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .history-card-header {
+    flex-direction: column;
+  }
+
+  .history-info-row {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .history-info-row > span:first-child {
+    flex: auto;
+  }
+
+  .history-info-row strong {
+    text-align: left;
+  }
+}
+.history-order-date {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.history-order-items {
+  display: grid;
+  gap: 10px;
+  margin-top: 5px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.history-items-title {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.history-order-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.history-order-item > div {
+  display: grid;
+  gap: 4px;
+}
+
+.history-order-item strong {
+  color: #172033;
+  font-size: 13px;
+}
+
+.history-order-item small {
+  color: #64748b;
+}
+
+.history-order-item b {
+  color: #dc2626;
+  white-space: nowrap;
+}
+
+.history-total-box {
+  display: grid;
+  gap: 5px;
+}
+
+.cancel-order-btn {
+  padding: 10px 16px;
+  border: 1px solid #dc2626;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #dc2626;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cancel-order-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.cancel-order-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 600px) {
+  .history-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cancel-order-btn {
+    width: 100%;
+  }
+
+  .history-order-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+.history-order-item-link {
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.history-order-item-link:hover {
+  transform: translateY(-2px);
+  background: #eff6ff;
+  outline: 1px solid #bfdbfe;
+}
+
+.history-review-hint {
+  display: block;
+  margin-top: 5px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+}

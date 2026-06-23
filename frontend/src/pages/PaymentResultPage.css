@@ -1,0 +1,124 @@
+.payment-result-page {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  padding: 60px 20px;
+  background: #f5f7fb;
+}
+
+.payment-result-card {
+  width: min(580px, 100%);
+  padding: 36px;
+  box-sizing: border-box;
+  border-radius: 22px;
+  background: white;
+  box-shadow: 0 16px 45px rgba(15, 23, 42, 0.12);
+  text-align: center;
+}
+
+.payment-result-icon {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  font-size: 36px;
+  font-weight: 900;
+}
+
+.payment-result-icon.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.payment-result-icon.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.payment-result-icon.pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.payment-result-card h1 {
+  margin-bottom: 10px;
+  color: #172033;
+}
+
+.payment-result-card > p {
+  color: #64748b;
+}
+
+.payment-result-info {
+  margin-top: 28px;
+  text-align: left;
+}
+
+.payment-result-info > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.payment-result-info span {
+  color: #64748b;
+}
+
+.payment-result-info strong {
+  color: #172033;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.payment-result-error {
+  margin-top: 18px;
+  padding: 13px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.payment-result-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.payment-result-actions button {
+  flex: 1;
+  padding: 13px;
+  border: none;
+  border-radius: 10px;
+  background: #dc2626;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-result-actions button.secondary {
+  background: #e2e8f0;
+  color: #172033;
+}
+
+@media (max-width: 560px) {
+  .payment-result-card {
+    padding: 26px 18px;
+  }
+
+  .payment-result-actions {
+    flex-direction: column;
+  }
+
+  .payment-result-info > div {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .payment-result-info strong {
+    text-align: left;
+  }
+}
