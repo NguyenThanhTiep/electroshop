@@ -202,6 +202,11 @@ export default function ProductDetail() {
 
   const savedAmount = Math.max(0, regularPrice - finalPrice);
 
+  const displaySoldQuantity =
+    priceSource === "FLASH_SALE"
+      ? Number(activeFlashSaleProduct?.soldQuantity || 0)
+      : Number(product.soldQuantity || 0);
+
   const visibleOptions = showAllOptions
     ? productOptions
     : productOptions.slice(0, 2);
@@ -596,10 +601,8 @@ export default function ProductDetail() {
               <span>⭐ 4.9</span>
 
               <span>
-                • Đã bán {Number(activeFlashSaleProduct?.soldQuantity || 0)}
+                • Đã bán {displaySoldQuantity} • Còn lại {product?.stock || 0}
               </span>
-
-              <span>• Còn lại {product.stock || 0}</span>
             </div>
 
             <div className="product-price-row">

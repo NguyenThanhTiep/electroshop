@@ -29,11 +29,11 @@ public class Product {
     private String name;
 
     @Column(
-    nullable = false,
-    precision = 15,
-    scale = 2
-)
-private BigDecimal price;
+        nullable = false,
+        precision = 15,
+        scale = 2
+    )
+    private BigDecimal price;
 
     private String image;
 
@@ -42,7 +42,12 @@ private BigDecimal price;
 
     private Integer stock;
 
+    @Builder.Default
+    @Column(name = "sold_quantity", nullable = false)
+    private Integer soldQuantity = 0;
+
     private String category;
+
     private String brand;
 
     @Column(columnDefinition = "LONGTEXT")
@@ -75,5 +80,14 @@ private BigDecimal price;
     ) {
 
         this.category = category;
+    }
+
+    @PrePersist
+    public void prePersist() {
+
+        if (soldQuantity == null) {
+
+            soldQuantity = 0;
+        }
     }
 }

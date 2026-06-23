@@ -147,6 +147,16 @@ export default function CheckoutPage() {
     estimatedSubtotal + estimatedShippingFee - estimatedDiscountAmount,
   );
 
+  const deliveryAddress = formData.shippingAddress.trim();
+
+  const canShowDeliveryMap = deliveryAddress.length >= 10;
+
+  const deliveryMapQuery = encodeURIComponent(`${deliveryAddress}, Việt Nam`);
+
+  const deliveryMapEmbedUrl = `https://maps.google.com/maps?q=${deliveryMapQuery}&z=16&output=embed`;
+
+  const deliveryMapOpenUrl = `https://www.google.com/maps/search/?api=1&query=${deliveryMapQuery}`;
+
   useEffect(() => {
     let cancelled = false;
 
@@ -468,6 +478,41 @@ export default function CheckoutPage() {
                   onChange={handleInputChange}
                 />
               </label>
+
+              {canShowDeliveryMap && (
+                <div className="checkout-delivery-map checkout-field-full">
+                  <div className="checkout-delivery-map-header">
+                    <div>
+                      <strong>Xác nhận vị trí giao hàng</strong>
+
+                      <p>Kiểm tra nhanh vị trí theo địa chỉ bạn vừa nhập.</p>
+                    </div>
+
+                    <a
+                      href={deliveryMapOpenUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Mở Google Maps
+                    </a>
+                  </div>
+
+                  <div className="checkout-delivery-map-frame">
+                    <iframe
+                      title="Bản đồ địa chỉ giao hàng"
+                      src={deliveryMapEmbedUrl}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+
+                  <p className="checkout-delivery-map-note">
+                    Nếu bản đồ chưa đúng vị trí, hãy nhập địa chỉ chi tiết hơn:
+                    số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố.
+                  </p>
+                </div>
+              )}
 
               <label className="checkout-field checkout-field-full">
                 <span>Ghi chú đơn hàng</span>

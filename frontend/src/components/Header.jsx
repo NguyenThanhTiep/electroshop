@@ -210,14 +210,14 @@ export default function Header() {
             <b>Shop</b>
           </Link>
 
-          <div className="address">
+          <Link to="/contact" className="address">
             <MapPin size={20} />
 
             <div>
               <span>Giao hàng</span>
               <strong>Toàn quốc</strong>
             </div>
-          </div>
+          </Link>
         </div>
 
         <div className="header-search-wrapper" ref={searchRef}>

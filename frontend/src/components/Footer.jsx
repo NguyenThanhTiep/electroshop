@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="footer">
@@ -21,7 +23,11 @@ export default function Footer() {
         <div>
           <h3>Hỗ trợ</h3>
 
-          <p>Liên hệ</p>
+          <p>
+            <Link to="/contact" className="footer-link">
+              Liên hệ
+            </Link>
+          </p>
 
           <p>Bảo hành</p>
 

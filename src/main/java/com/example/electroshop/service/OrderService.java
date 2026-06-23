@@ -33,30 +33,37 @@ public class OrderService {
     private final ProductRepository
             productRepository;
 
-    private final PaymentRepository
-            paymentRepository;
+private final PaymentRepository
+        paymentRepository;
 
-    private final UserRepository
-            userRepository;
+private final UserRepository
+        userRepository;
+
+private final OrderBenefitService
+        orderBenefitService;
 
     public OrderService(
-            OrderRepository orderRepository,
-            ProductRepository productRepository,
-            PaymentRepository paymentRepository,
-            UserRepository userRepository
-    ) {
-        this.orderRepository =
-                orderRepository;
+        OrderRepository orderRepository,
+        ProductRepository productRepository,
+        PaymentRepository paymentRepository,
+        UserRepository userRepository,
+        OrderBenefitService orderBenefitService
+) {
+    this.orderRepository =
+            orderRepository;
 
-        this.productRepository =
-                productRepository;
+    this.productRepository =
+            productRepository;
 
-        this.paymentRepository =
-                paymentRepository;
+    this.paymentRepository =
+            paymentRepository;
 
-        this.userRepository =
-                userRepository;
-    }
+    this.userRepository =
+            userRepository;
+
+    this.orderBenefitService =
+            orderBenefitService;
+}
 
     /*
      * Admin lấy toàn bộ đơn hàng.
@@ -312,9 +319,13 @@ public class OrderService {
 
         releaseStock(order);
 
-        order.setOrderStatus(
-                OrderStatus.CANCELLED
-        );
+orderBenefitService.releaseBenefits(
+        order.getId()
+);
+
+order.setOrderStatus(
+        OrderStatus.CANCELLED
+);
 
         order.setExpiresAt(null);
 

@@ -11,6 +11,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import SearchPage from "./pages/SearchPage";
+import ContactPage from "./pages/ContactPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PaymentResultPage from "./pages/PaymentResultPage";
 
@@ -21,6 +22,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
 
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/cart" element={<CartPage />} />
 
         <Route path="/login" element={<LoginPage />} />
