@@ -2095,3 +2095,151 @@ td {
   background: #ffffff;
   cursor: pointer;
 }
+.admin-users-page {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-section-header h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 28px;
+}
+
+.admin-section-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.admin-user-list-card {
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+}
+
+.admin-user-list-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.admin-user-list-header h3 {
+  margin: 0 0 4px;
+  color: #111827;
+}
+
+.admin-user-list-header span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-user-list-header input {
+  width: 100%;
+  max-width: 360px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #d7dce5;
+  border-radius: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.admin-user-list-header input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.admin-user-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-user-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-user-table th,
+.admin-user-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-user-table th {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 900;
+  background: #f8fafc;
+}
+
+.admin-role-badge,
+.admin-status-badge {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-role-admin {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.admin-role-user {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.admin-status-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.admin-status-locked {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.admin-user-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-user-row-actions button {
+  padding: 8px 11px;
+  border: none;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-user-row-actions button.danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.admin-empty-cell {
+  padding: 28px !important;
+  color: #64748b;
+  text-align: center !important;
+}
+
+@media (max-width: 768px) {
+  .admin-user-list-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-user-list-header input {
+    max-width: none;
+  }
+}

@@ -205,6 +205,13 @@ public class AuthController {
                     .body("Sai tài khoản hoặc mật khẩu");
         }
 
+        if (Boolean.TRUE.equals(user.getLocked())) {
+
+    return ResponseEntity
+            .status(403)
+            .body("Tài khoản đã bị khóa");
+}
+
         boolean isMatch =
                 encoder.matches(
                         request.getPassword(),

@@ -27,6 +27,9 @@ public class User {
 
     private String role = "user";
 
+    @Column(nullable = false)
+    private Boolean locked = false;
+
     public User() {
     }
 
@@ -48,6 +51,7 @@ public class User {
         this.phone = phone;
         this.password = password;
         this.role = role;
+        this.locked = false;
     }
 
     public Long getId() {
@@ -144,5 +148,17 @@ public class User {
     ) {
 
         this.role = role;
+    }
+
+    public Boolean getLocked() {
+
+        return locked;
+    }
+
+    public void setLocked(
+            Boolean locked
+    ) {
+
+        this.locked = locked;
     }
 }

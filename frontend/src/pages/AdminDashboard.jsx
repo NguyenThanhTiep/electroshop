@@ -8,6 +8,12 @@ import {
 } from "../services/bannerApi";
 
 import {
+  getAdminUsers,
+  updateAdminUserLock,
+  deleteAdminUser,
+} from "../services/userApi";
+
+import {
   getHomeSections,
   createHomeSection,
   updateHomeSection,
@@ -208,6 +214,10 @@ export default function AdminDashboard() {
 
   const [orders, setOrders] = useState([]);
 
+  const [users, setUsers] = useState([]);
+
+  const [userSearchKeyword, setUserSearchKeyword] = useState("");
+
   const [promotionSubTab, setPromotionSubTab] = useState("product-discount");
 
   const [discountPromotions, setDiscountPromotions] = useState([]);
@@ -385,6 +395,8 @@ export default function AdminDashboard() {
     fetchBrands();
 
     fetchOrders();
+
+    fetchUsers();
 
     fetchBanners();
 
@@ -621,6 +633,74 @@ export default function AdminDashboard() {
       setOrders(data);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const data = await getAdminUsers();
+
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.log(error);
+
+      alert("Không thể tải danh sách người dùng");
+    }
+  };
+
+  const handleToggleUserLock = async (user) => {
+    const nextLocked = !Boolean(user.locked);
+
+    const confirmed = window.confirm(
+      nextLocked
+        ? "Bạn có chắc muốn khóa tài khoản này?"
+        : "Bạn có chắc muốn mở khóa tài khoản này?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await updateAdminUserLock(user.id, nextLocked);
+
+      await fetchUsers();
+
+      alert(nextLocked ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản");
+    } catch (error) {
+      console.log(error);
+
+      alert(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Thao tác thất bại",
+      );
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa người dùng "${user.fullName || user.email}"?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteAdminUser(user.id);
+
+      await fetchUsers();
+
+      alert("Xóa người dùng thành công");
+    } catch (error) {
+      console.log(error);
+
+      alert(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Xóa người dùng thất bại",
+      );
     }
   };
 
@@ -1948,6 +2028,33 @@ export default function AdminDashboard() {
     return Number(value || 0).toLocaleString("vi-VN") + "đ";
   };
 
+  const managedUsers = users.filter(
+    (user) => String(user.role || "").toLowerCase() !== "admin",
+  );
+
+  const filteredUsers = managedUsers.filter((user) => {
+    const keyword = userSearchKeyword.trim().toLowerCase();
+
+    if (!keyword) {
+      return true;
+    }
+
+    return (
+      String(user.fullName || "")
+        .toLowerCase()
+        .includes(keyword) ||
+      String(user.email || "")
+        .toLowerCase()
+        .includes(keyword) ||
+      String(user.phone || "")
+        .toLowerCase()
+        .includes(keyword) ||
+      String(user.role || "")
+        .toLowerCase()
+        .includes(keyword)
+    );
+  });
+
   return (
     <div className="admin-dashboard">
       {/* SIDEBAR */}
@@ -2037,11 +2144,20 @@ export default function AdminDashboard() {
             <span>Đơn hàng</span>
           </div>
 
-          <div className="sidebar-item">
+          <button
+            type="button"
+            className={
+              activeMenu === "users" ? "sidebar-item active" : "sidebar-item"
+            }
+            onClick={() => {
+              setActiveMenu("users");
+              fetchUsers();
+            }}
+          >
             <span>👥</span>
 
             <span>Người dùng</span>
-          </div>
+          </button>
 
           <div className="sidebar-item">
             <span>⚙️</span>
@@ -2063,6 +2179,122 @@ export default function AdminDashboard() {
             Đăng xuất
           </button>
         </div>
+
+        {activeMenu === "users" && (
+          <div className="admin-users-page">
+            <div className="admin-section-header">
+              <div>
+                <h2>Quản lý người dùng</h2>
+
+                <p>
+                  Xem danh sách, tìm kiếm, khóa tài khoản hoặc xóa người dùng.
+                </p>
+              </div>
+            </div>
+
+            <div className="admin-user-list-card">
+              <div className="admin-user-list-header">
+                <div>
+                  <h3>Danh sách người dùng</h3>
+
+                  <span>
+                    Tổng cộng {managedUsers.length} tài khoản người dùng
+                  </span>
+                </div>
+
+                <input
+                  type="text"
+                  value={userSearchKeyword}
+                  placeholder="Tìm theo tên, email, số điện thoại..."
+                  onChange={(event) => setUserSearchKeyword(event.target.value)}
+                />
+              </div>
+
+              <div className="admin-user-table-wrap">
+                <table className="admin-user-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Họ tên</th>
+                      <th>Email</th>
+                      <th>Số điện thoại</th>
+                      <th>Quyền</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="admin-empty-cell">
+                          Không có người dùng nào
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((user) => (
+                        <tr key={user.id}>
+                          <td>{user.id}</td>
+
+                          <td>
+                            <strong>{user.fullName || "Chưa cập nhật"}</strong>
+                          </td>
+
+                          <td>{user.email}</td>
+
+                          <td>{user.phone}</td>
+
+                          <td>
+                            <span
+                              className={
+                                user.role === "admin"
+                                  ? "admin-role-badge admin-role-admin"
+                                  : "admin-role-badge admin-role-user"
+                              }
+                            >
+                              {user.role === "admin" ? "Admin" : "User"}
+                            </span>
+                          </td>
+
+                          <td>
+                            <span
+                              className={
+                                user.locked
+                                  ? "admin-status-badge admin-status-locked"
+                                  : "admin-status-badge admin-status-active"
+                              }
+                            >
+                              {user.locked ? "Đã khóa" : "Hoạt động"}
+                            </span>
+                          </td>
+
+                          <td>
+                            <div className="admin-user-row-actions">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleUserLock(user)}
+                              >
+                                {user.locked ? "Mở khóa" : "Khóa"}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="danger"
+                                onClick={() => handleDeleteUser(user)}
+                              >
+                                Xóa
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {activeMenu === "promotions" && (
           <div className="homepage-admin">
