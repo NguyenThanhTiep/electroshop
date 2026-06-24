@@ -1,5 +1,5 @@
 import "./AdminDashboard.css";
-
+import AdminOverview from "../components/admin/AdminOverview";
 import {
   getBanners,
   createBanner,
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
     dealTheme: "RED",
   });
 
-  const [activeMenu, setActiveMenu] = useState("products");
+  const [activeMenu, setActiveMenu] = useState("overview");
 
   const [brands, setBrands] = useState([]);
 
@@ -371,18 +371,37 @@ export default function AdminDashboard() {
   const highlightIcons = ["🖥", "⚡", "🎮", "❄️", "🔋", "💾", "🚀", "⭐"];
 
   const categoryIcons = [
-    "💻",
-    "🖥",
-    "🎮",
-    "📱",
-    "⌨️",
-    "🖱️",
-    "🎧",
-    "🔥",
-    "⚡",
-    "🧠",
-    "📺",
-    "🛒",
+    "💻", // Laptop
+    "🖥️", // Máy tính bàn / màn hình
+    "🖨️", // Máy in
+    "📱", // Điện thoại
+    "📲", // Thiết bị di động
+    "⌚", // Đồng hồ thông minh
+    "🎧", // Tai nghe
+    "🎮", // Gaming
+    "🕹️", // Tay cầm / game gear
+    "⌨️", // Bàn phím
+    "🖱️", // Chuột
+    "📷", // Camera
+    "🎥", // Webcam / quay phim
+    "🎤", // Micro
+    "🔊", // Loa
+    "📺", // Tivi / màn hình
+    "📡", // Thiết bị mạng
+    "🔌", // Sạc / cáp
+    "🔋", // Pin / sạc dự phòng
+    "💾", // Lưu trữ
+    "💿", // Ổ đĩa / phần mềm
+    "🧩", // Linh kiện
+    "🧰", // Phụ kiện
+    "🛠️", // Công cụ sửa chữa
+    "🛡️", // Bảo hành / bảo vệ
+    "⚡", // Hiệu năng / điện
+    "🔥", // Hot / bán chạy
+    "✨", // Hàng mới
+    "🏷️", // Khuyến mãi
+    "🎁", // Combo / quà tặng
+    "🛒", // Sản phẩm khác
   ];
 
   const promotionIcons = ["🎁", "🎒", "🛠", "💳", "🚚", "🔥", "🏷", "🎧"];
@@ -469,14 +488,15 @@ export default function AdminDashboard() {
     try {
       if (editingCategoryId) {
         await updateCategory(editingCategoryId, {
-          name: categoryName,
+          name: categoryName.trim(),
           icon: categoryIcon,
         });
 
         alert("Cập nhật danh mục thành công");
       } else {
         await createCategory({
-          name: categoryName,
+          name: categoryName.trim(),
+          icon: categoryIcon,
         });
 
         alert("Thêm danh mục thành công");
@@ -626,6 +646,30 @@ export default function AdminDashboard() {
       alert(error.response?.data || "Không thể upload ảnh");
     }
   };
+
+  const handleUploadToForm = async (event, setForm, fieldName) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const imageUrl = await uploadImage(file);
+
+      setForm((prevForm) => ({
+        ...prevForm,
+        [fieldName]: imageUrl,
+      }));
+
+      event.target.value = "";
+    } catch (error) {
+      console.error(error);
+
+      alert(error.response?.data || "Không thể upload ảnh");
+    }
+  };
+
   const fetchOrders = async () => {
     try {
       const data = await getOrders();
@@ -1464,8 +1508,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    if (!bannerForm.imageUrl.trim()) {
-      alert("Vui lòng nhập link ảnh banner");
+    if (!bannerForm.imageUrl) {
+      alert("Vui lòng upload ảnh banner");
       return;
     }
 
@@ -2180,6 +2224,26 @@ export default function AdminDashboard() {
           </button>
         </div>
 
+        {activeMenu === "overview" && (
+          <AdminOverview
+            products={products}
+            orders={orders}
+            users={users}
+            promotions={discountPromotions}
+            coupons={coupons}
+            flashSales={flashSales}
+            onOpenMenu={setActiveMenu}
+            onRefresh={() => {
+              fetchProducts();
+              fetchOrders();
+              fetchUsers();
+              fetchPromotions();
+              fetchCoupons();
+              fetchFlashSales();
+            }}
+          />
+        )}
+
         {activeMenu === "users" && (
           <div className="admin-users-page">
             <div className="admin-section-header">
@@ -2692,13 +2756,49 @@ export default function AdminDashboard() {
                       onChange={handleFlashSaleChange}
                     />
 
-                    <input
-                      type="text"
-                      name="bannerImage"
-                      placeholder="Ảnh banner: /images/golden-hour-header.png"
-                      value={flashSaleForm.bannerImage}
-                      onChange={handleFlashSaleChange}
-                    />
+                    <div className="admin-upload-field">
+                      <span>Ảnh banner Flash Sale</span>
+
+                      <label className="admin-upload-box">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) =>
+                            handleUploadToForm(
+                              event,
+                              setFlashSaleForm,
+                              "bannerImage",
+                            )
+                          }
+                        />
+
+                        <div>
+                          <strong>Chọn ảnh Flash Sale</strong>
+                          <small>Ảnh header cho chiến dịch</small>
+                        </div>
+                      </label>
+
+                      {flashSaleForm.bannerImage && (
+                        <div className="admin-upload-preview">
+                          <img
+                            src={flashSaleForm.bannerImage}
+                            alt="Flash Sale banner"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFlashSaleForm((prev) => ({
+                                ...prev,
+                                bannerImage: "",
+                              }))
+                            }
+                          >
+                            Xóa ảnh
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
                     <label className="admin-field-label">
                       Thời gian bắt đầu
@@ -3039,13 +3139,42 @@ export default function AdminDashboard() {
                     onChange={handleBannerChange}
                   />
 
-                  <input
-                    type="text"
-                    name="imageUrl"
-                    placeholder="Link ảnh banner"
-                    value={bannerForm.imageUrl}
-                    onChange={handleBannerChange}
-                  />
+                  <div className="admin-upload-field">
+                    <span>Ảnh banner</span>
+
+                    <label className="admin-upload-box">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) =>
+                          handleUploadToForm(event, setBannerForm, "imageUrl")
+                        }
+                      />
+
+                      <div>
+                        <strong>Chọn ảnh banner</strong>
+                        <small>PNG, JPG, JPEG, WEBP</small>
+                      </div>
+                    </label>
+
+                    {bannerForm.imageUrl && (
+                      <div className="admin-upload-preview">
+                        <img src={bannerForm.imageUrl} alt="Banner preview" />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setBannerForm((prev) => ({
+                              ...prev,
+                              imageUrl: "",
+                            }))
+                          }
+                        >
+                          Xóa ảnh
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   <input
                     type="text"
@@ -3373,13 +3502,49 @@ export default function AdminDashboard() {
                             ))}
                         </select>
 
-                        <input
-                          type="text"
-                          name="bannerImage"
-                          placeholder="Ảnh banner ngang cho khối sản phẩm"
-                          value={sectionForm.bannerImage}
-                          onChange={handleSectionChange}
-                        />
+                        <div className="admin-upload-field">
+                          <span>Ảnh banner khối</span>
+
+                          <label className="admin-upload-box">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(event) =>
+                                handleUploadToForm(
+                                  event,
+                                  setSectionForm,
+                                  "bannerImage",
+                                )
+                              }
+                            />
+
+                            <div>
+                              <strong>Chọn ảnh banner khối</strong>
+                              <small>Ảnh hiển thị trong khối sản phẩm</small>
+                            </div>
+                          </label>
+
+                          {sectionForm.bannerImage && (
+                            <div className="admin-upload-preview">
+                              <img
+                                src={sectionForm.bannerImage}
+                                alt="Section banner"
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSectionForm((prev) => ({
+                                    ...prev,
+                                    bannerImage: "",
+                                  }))
+                                }
+                              >
+                                Xóa ảnh
+                              </button>
+                            </div>
+                          )}
+                        </div>
 
                         <input
                           type="text"
@@ -3390,13 +3555,49 @@ export default function AdminDashboard() {
                         />
 
                         <div className="homepage-left-banner-box">
-                          <input
-                            type="text"
-                            name="leftBannerImage"
-                            placeholder="Ảnh banner cột trái, ví dụ: /images/oppo-left-banner.png"
-                            value={sectionForm.leftBannerImage}
-                            onChange={handleSectionChange}
-                          />
+                          <div className="admin-upload-field">
+                            <span>Ảnh banner cột trái</span>
+
+                            <label className="admin-upload-box">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(event) =>
+                                  handleUploadToForm(
+                                    event,
+                                    setSectionForm,
+                                    "leftBannerImage",
+                                  )
+                                }
+                              />
+
+                              <div>
+                                <strong>Chọn ảnh banner trái</strong>
+                                <small>Ảnh nằm bên trái khối sản phẩm</small>
+                              </div>
+                            </label>
+
+                            {sectionForm.leftBannerImage && (
+                              <div className="admin-upload-preview">
+                                <img
+                                  src={sectionForm.leftBannerImage}
+                                  alt="Left banner"
+                                />
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSectionForm((prev) => ({
+                                      ...prev,
+                                      leftBannerImage: "",
+                                    }))
+                                  }
+                                >
+                                  Xóa ảnh
+                                </button>
+                              </div>
+                            )}
+                          </div>
 
                           <input
                             type="text"
@@ -4263,35 +4464,6 @@ export default function AdminDashboard() {
                 </div>
               </form>
             </div>
-
-            {/* STATS */}
-
-            <div className="stats-grid">
-              <div className="stat-card">
-                <p>Tổng doanh thu</p>
-
-                <h2>$52K</h2>
-              </div>
-
-              <div className="stat-card">
-                <p>Tổng đơn hàng</p>
-
-                <h2>{orders.length}</h2>
-              </div>
-
-              <div className="stat-card">
-                <p>Khách hàng</p>
-
-                <h2>892</h2>
-              </div>
-
-              <div className="stat-card">
-                <p>Sản phẩm</p>
-
-                <h2>{products.length}</h2>
-              </div>
-            </div>
-
             {/* PRODUCT TABLE */}
 
             <div className="product-table">

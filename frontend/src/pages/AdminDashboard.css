@@ -2243,3 +2243,84 @@ td {
     max-width: none;
   }
 }
+.admin-upload-field {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-upload-field > span {
+  color: #172033;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.admin-upload-box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 18px;
+  border: 2px dashed #bfdbfe;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eff6ff, #ffffff);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.admin-upload-box:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.admin-upload-box input {
+  display: none;
+}
+
+.admin-upload-box div {
+  display: grid;
+  gap: 5px;
+  text-align: center;
+}
+
+.admin-upload-box strong {
+  color: #2563eb;
+  font-size: 15px;
+}
+
+.admin-upload-box small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.admin-upload-preview {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.admin-upload-preview img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+}
+
+.admin-upload-preview button {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-upload-preview button:hover {
+  background: #dc2626;
+}

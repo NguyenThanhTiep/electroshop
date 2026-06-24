@@ -4748,3 +4748,346 @@ body {
 .footer-link:hover {
   color: #2563eb;
 }
+/* ===============================
+   FIX HOME PRODUCT SLIDER
+   =============================== */
+
+.homepage .home-tab-products-wrap,
+.homepage .home-section-products-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 0 14px;
+  overflow: visible;
+}
+
+.homepage .home-tab-body,
+.homepage .home-section-body {
+  min-width: 0;
+  overflow: visible !important;
+}
+
+.homepage .home-tab-products,
+.homepage .home-section-grid {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: calc((100% - 64px) / 5) !important;
+  gap: 16px !important;
+
+  width: 100%;
+  min-width: 0;
+
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+
+  padding: 0 2px 10px !important;
+}
+
+.homepage .home-tab-products::-webkit-scrollbar,
+.homepage .home-section-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.homepage .home-tab-products.rows-1,
+.homepage .home-section-grid.rows-1 {
+  grid-template-rows: 1fr !important;
+}
+
+.homepage .home-tab-products.rows-2,
+.homepage .home-section-grid.rows-2 {
+  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.homepage .home-tab-products > *,
+.homepage .home-section-grid > * {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+}
+
+.homepage .eshop-product-card {
+  width: 100%;
+  height: 100%;
+}
+
+/* Nút mũi tên dùng chung */
+.homepage .home-slider-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 50;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+
+  border: none;
+  border-radius: 999px;
+
+  background: #ffffff;
+  color: #2563eb;
+
+  font-size: 24px;
+  font-weight: 1000;
+
+  cursor: pointer;
+
+  transform: translateY(-50%);
+
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+  transition: 0.2s ease;
+}
+
+.homepage .home-slider-arrow.left {
+  left: -6px;
+}
+
+.homepage .home-slider-arrow.right {
+  right: -6px;
+}
+
+.homepage .home-slider-arrow:hover {
+  transform: translateY(-50%) scale(1.08);
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.homepage .home-empty-products {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+  border-radius: 16px;
+
+  background: #f8fafc;
+  color: #64748b;
+
+  font-weight: 800;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .homepage .home-tab-products,
+  .homepage .home-section-grid {
+    grid-auto-columns: calc((100% - 32px) / 3) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .homepage .home-tab-products,
+  .homepage .home-section-grid {
+    grid-auto-columns: calc((100% - 16px) / 2) !important;
+  }
+
+  .homepage .home-slider-arrow {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+}
+/* =====================================================
+   FIX TAB PRODUCT BLOCK SAME NORMAL PRODUCT BLOCK
+   ===================================================== */
+
+.homepage .home-tabbed-section,
+.homepage .home-product-section {
+  overflow: visible !important;
+}
+
+.homepage .home-tab-body,
+.homepage .home-section-body {
+  width: 100%;
+  min-width: 0;
+  overflow: visible !important;
+}
+
+.homepage .home-tab-products-wrap,
+.homepage .home-section-products-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 22px 16px;
+  box-sizing: border-box;
+  overflow: visible !important;
+}
+
+/* Khi có banner trái */
+.homepage .home-tab-body.has-left-banner,
+.homepage .home-section-body.has-left-banner {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Grid sản phẩm dùng chung cho tab và khối thường */
+.homepage .home-tab-products,
+.homepage .home-section-grid {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: calc((100% - 64px) / 5) !important;
+  gap: 16px !important;
+
+  width: 100%;
+  min-width: 0;
+
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Ẩn thanh scroll */
+.homepage .home-tab-products::-webkit-scrollbar,
+.homepage .home-section-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.homepage .home-tab-products,
+.homepage .home-section-grid {
+  scrollbar-width: none;
+}
+
+/* 1 hàng */
+.homepage .home-tab-products.rows-1,
+.homepage .home-section-grid.rows-1 {
+  grid-template-rows: 1fr !important;
+}
+
+/* 2 hàng */
+.homepage .home-tab-products.rows-2,
+.homepage .home-section-grid.rows-2 {
+  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+}
+
+/* Card trong tab và card trong khối thường đồng bộ */
+.homepage .home-tab-products > *,
+.homepage .home-section-grid > * {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  scroll-snap-align: start;
+}
+
+.homepage .home-tab-products .eshop-product-card,
+.homepage .home-section-grid .eshop-product-card {
+  width: 100%;
+  height: 100%;
+  min-height: 258px;
+  box-sizing: border-box;
+}
+
+/* Banner trong tab không làm lệch grid */
+.homepage .home-tab-banner {
+  margin: 10px 22px 0;
+  height: 54px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.homepage .home-tab-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Mũi tên dùng chung, nằm trong khung để không bị mất */
+.homepage .home-slider-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 80;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  border: none;
+  border-radius: 999px;
+
+  background: #ffffff;
+  color: #2563eb;
+
+  font-size: 20px;
+  font-weight: 1000;
+
+  cursor: pointer;
+
+  transform: translateY(-50%);
+
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  transition: 0.2s ease;
+}
+
+.homepage .home-slider-arrow.left {
+  left: 4px;
+}
+
+.homepage .home-slider-arrow.right {
+  right: 4px;
+}
+
+.homepage .home-slider-arrow:hover {
+  background: #2563eb;
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.06);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .homepage .home-tab-products,
+  .homepage .home-section-grid {
+    grid-auto-columns: calc((100% - 32px) / 3) !important;
+  }
+
+  .homepage .home-tab-body.has-left-banner,
+  .homepage .home-section-body.has-left-banner {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .homepage .home-tab-products-wrap,
+  .homepage .home-section-products-wrap {
+    padding: 10px 16px 14px;
+  }
+
+  .homepage .home-tab-products,
+  .homepage .home-section-grid {
+    grid-auto-columns: calc((100% - 12px) / 2) !important;
+    gap: 12px !important;
+  }
+
+  .homepage .home-tab-body.has-left-banner,
+  .homepage .home-section-body.has-left-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .homepage .home-slider-arrow {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+  }
+
+  .homepage .home-slider-arrow.left {
+    left: 2px;
+  }
+
+  .homepage .home-slider-arrow.right {
+    right: 2px;
+  }
+}

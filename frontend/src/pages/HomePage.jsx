@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
 import Sidebar from "../components/Sidebar";
-
+import HomeProductCard from "../components/home/HomeProductCard";
 import { useEffect, useRef, useMemo, useState } from "react";
 
 import { useLocation } from "react-router-dom";
@@ -12,6 +12,8 @@ import { useLocation } from "react-router-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { getProducts } from "../services/productApi";
+
+import { getReviewSummary } from "../services/reviewApi";
 
 import { getCategories } from "../services/categoryApi";
 
@@ -158,9 +160,36 @@ export default function HomePage() {
     try {
       const data = await getProducts();
 
-      setProducts(Array.isArray(data) ? data : []);
+      const productList = Array.isArray(data) ? data : [];
+
+      const productsWithRating = await Promise.all(
+        productList.map(async (product) => {
+          try {
+            const summary = await getReviewSummary(product.id);
+
+            return {
+              ...product,
+
+              averageRating: Number(summary?.averageRating || 0),
+
+              totalReviews: Number(summary?.totalReviews || 0),
+            };
+          } catch (error) {
+            console.log("Không thể tải đánh giá sản phẩm:", product.id, error);
+
+            return {
+              ...product,
+              averageRating: 0,
+              totalReviews: 0,
+            };
+          }
+        }),
+      );
+
+      setProducts(productsWithRating);
     } catch (error) {
       console.log(error);
+      setProducts([]);
     }
   };
 
@@ -829,6 +858,14 @@ export default function HomePage() {
       brand: "",
     }));
   }, [keywordFromUrl, categoryFromUrl]);
+
+  const scrollProductSlider = (selector, distance) => {
+    document.querySelector(selector)?.scrollBy({
+      left: distance,
+      behavior: "smooth",
+    });
+  };
+
   return (
     <div className="homepage">
       <Header />
@@ -1450,87 +1487,59 @@ export default function HomePage() {
                   </div>
                 )}
 
-                <div
-                  className={
-                    Number(activeTab.productRows || 1) === 2
-                      ? "home-tab-products rows-2"
-                      : "home-tab-products rows-1"
-                  }
-                >
-                  {productsForTab.length > 0 ? (
-                    productsForTab.map((product) => {
-                      const priceInfo = getEffectiveHomePrice(product);
+                <div className="home-tab-products-wrap">
+                  <button
+                    type="button"
+                    className="home-slider-arrow left"
+                    onClick={() =>
+                      scrollProductSlider(
+                        `.home-tab-products-${activeTab.id}`,
+                        -900,
+                      )
+                    }
+                  >
+                    ❮
+                  </button>
 
-                      const finalPrice = priceInfo.finalPrice;
+                  <div
+                    className={`home-tab-products home-tab-products-${activeTab.id} ${
+                      Number(activeTab.productRows || 1) === 2
+                        ? "rows-2"
+                        : "rows-1"
+                    }`}
+                  >
+                    {productsForTab.length > 0 ? (
+                      productsForTab.map((product) => {
+                        const priceInfo = getEffectiveHomePrice(product);
 
-                      return (
-                        <div
-                          className="home-section-card"
-                          key={product.id}
-                          onClick={() => navigate(`/product/${product.id}`)}
-                        >
-                          {priceInfo.priceSource !== "REGULAR" && (
-                            <div className="home-section-sale-badge">
-                              {priceInfo.priceSource === "FLASH_SALE"
-                                ? `Flash Sale -${priceInfo.discountPercent}%`
-                                : `Giảm ${priceInfo.discountPercent}%`}
-                            </div>
-                          )}
+                        return (
+                          <HomeProductCard
+                            key={product.id}
+                            product={product}
+                            priceInfo={priceInfo}
+                            onOpen={() => navigate(`/product/${product.id}`)}
+                          />
+                        );
+                      })
+                    ) : (
+                      <p className="home-empty-products">
+                        Chưa có sản phẩm phù hợp với tab này.
+                      </p>
+                    )}
+                  </div>
 
-                          <div className="home-section-installment">
-                            Trả góp 0%
-                          </div>
-
-                          <div className="home-section-card-image">
-                            <img src={product.image} alt={product.name} />
-                          </div>
-
-                          <div className="home-section-card-info">
-                            <h3>{product.name}</h3>
-
-                            <p className="home-section-card-price">
-                              {formatCurrency(finalPrice)}
-                            </p>
-
-                            {priceInfo.finalPrice < priceInfo.originalPrice && (
-                              <p className="home-section-old-price">
-                                {formatCurrency(priceInfo.originalPrice)}
-                              </p>
-                            )}
-
-                            <div className="home-section-discount blue">
-                              Thành viên giảm thêm 300.000đ
-                            </div>
-
-                            <div className="home-section-discount purple">
-                              Sinh viên giảm thêm 200.000đ
-                            </div>
-
-                            <p className="home-section-gift">
-                              Trả góp 0% - Đổi trả dễ dàng trong 7 ngày
-                            </p>
-
-                            <div className="home-section-card-bottom">
-                              <span>⭐ 5</span>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                }}
-                              >
-                                ♡ Yêu thích
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="home-section-empty">
-                      Chưa có sản phẩm phù hợp với tab này. Kiểm tra lại danh
-                      mục hoặc thương hiệu trong admin.
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    className="home-slider-arrow right"
+                    onClick={() =>
+                      scrollProductSlider(
+                        `.home-tab-products-${activeTab.id}`,
+                        900,
+                      )
+                    }
+                  >
+                    ❯
+                  </button>
                 </div>
               </div>
             </section>
@@ -1595,117 +1604,58 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    <div className="home-section-slider-wrapper">
+                    <div className="home-section-products-wrap">
                       <button
-                        className="home-section-arrow left"
-                        onClick={() => {
-                          document
-                            .querySelector(`.home-section-grid-${section.id}`)
-                            ?.scrollBy({
-                              left: -900,
-                              behavior: "smooth",
-                            });
-                        }}
+                        type="button"
+                        className="home-slider-arrow left"
+                        onClick={() =>
+                          scrollProductSlider(
+                            `.home-section-grid-${section.id}`,
+                            -900,
+                          )
+                        }
                       >
                         ❮
                       </button>
 
                       <div
-                        className={
+                        className={`home-section-grid home-section-grid-${section.id} ${
                           Number(section.productRows || 1) === 2
-                            ? `home-section-grid home-section-grid-${section.id} rows-2`
-                            : `home-section-grid home-section-grid-${section.id} rows-1`
-                        }
+                            ? "rows-2"
+                            : "rows-1"
+                        }`}
                       >
                         {sectionProducts.length > 0 ? (
                           sectionProducts.map((product) => {
                             const priceInfo = getEffectiveHomePrice(product);
 
-                            const finalPrice = priceInfo.finalPrice;
-
                             return (
-                              <div
-                                className="home-section-card"
+                              <HomeProductCard
                                 key={product.id}
-                                onClick={() =>
+                                product={product}
+                                priceInfo={priceInfo}
+                                onOpen={() =>
                                   navigate(`/product/${product.id}`)
                                 }
-                              >
-                                {priceInfo.priceSource !== "REGULAR" && (
-                                  <div className="home-section-sale-badge">
-                                    {priceInfo.priceSource === "FLASH_SALE"
-                                      ? `Flash Sale -${priceInfo.discountPercent}%`
-                                      : `Giảm ${priceInfo.discountPercent}%`}
-                                  </div>
-                                )}
-
-                                <div className="home-section-installment">
-                                  Trả góp 0%
-                                </div>
-
-                                <div className="home-section-card-image">
-                                  <img src={product.image} alt={product.name} />
-                                </div>
-
-                                <div className="home-section-card-info">
-                                  <h3>{product.name}</h3>
-
-                                  <p className="home-section-card-price">
-                                    {formatCurrency(finalPrice)}
-                                  </p>
-
-                                  {priceInfo.finalPrice <
-                                    priceInfo.originalPrice && (
-                                    <p className="home-section-old-price">
-                                      {formatCurrency(priceInfo.originalPrice)}
-                                    </p>
-                                  )}
-
-                                  <div className="home-section-discount blue">
-                                    Thành viên giảm thêm 300.000đ
-                                  </div>
-
-                                  <div className="home-section-discount purple">
-                                    Sinh viên giảm thêm 200.000đ
-                                  </div>
-
-                                  <p className="home-section-gift">
-                                    Trả góp 0% - Đổi trả dễ dàng trong 7 ngày
-                                  </p>
-
-                                  <div className="home-section-card-bottom">
-                                    <span>⭐ 5</span>
-
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                      }}
-                                    >
-                                      ♡ Yêu thích
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
+                              />
                             );
                           })
                         ) : (
-                          <div className="home-section-empty">
-                            Chưa có sản phẩm phù hợp với khối này. Kiểm tra lại
-                            danh mục hoặc thương hiệu trong admin.
-                          </div>
+                          <p className="home-empty-products">
+                            Chưa có sản phẩm phù hợp với khối này.
+                          </p>
                         )}
                       </div>
 
                       <button
-                        className="home-section-arrow right"
-                        onClick={() => {
-                          document
-                            .querySelector(`.home-section-grid-${section.id}`)
-                            ?.scrollBy({
-                              left: 900,
-                              behavior: "smooth",
-                            });
-                        }}
+                        type="button"
+                        className="home-slider-arrow right"
+                        onClick={() =>
+                          scrollProductSlider(
+                            `.home-section-grid-${section.id}`,
+                            900,
+                          )
+                        }
                       >
                         ❯
                       </button>

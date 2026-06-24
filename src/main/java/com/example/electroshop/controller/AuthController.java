@@ -205,7 +205,7 @@ public class AuthController {
                     .body("Sai tài khoản hoặc mật khẩu");
         }
 
-        if (Boolean.TRUE.equals(user.getLocked())) {
+if (Boolean.TRUE.equals(user.getLocked())) {
 
     return ResponseEntity
             .status(403)

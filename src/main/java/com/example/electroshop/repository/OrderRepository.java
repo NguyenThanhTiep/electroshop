@@ -33,6 +33,10 @@ public interface OrderRepository
             Long userId
     );
 
+    boolean existsByUserId(
+        Long userId
+);
+
     /*
      * Người dùng xem chi tiết đơn
      * thuộc đúng userId.

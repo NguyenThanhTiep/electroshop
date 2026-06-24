@@ -161,4 +161,13 @@ public class User {
 
         this.locked = locked;
     }
+
+    @PrePersist
+    public void prePersist() {
+
+        if (locked == null) {
+
+            locked = false;
+        }
+    }
 }

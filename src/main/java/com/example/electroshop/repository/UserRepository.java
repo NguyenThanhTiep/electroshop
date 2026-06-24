@@ -14,7 +14,5 @@ public interface UserRepository
 
     Optional<User> findByPhone(String phone);
 
-    long countByRoleIgnoreCase(String role);
-
     List<User> findByRoleIgnoreCaseOrderByIdAsc(String role);
 }
