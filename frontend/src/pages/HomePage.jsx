@@ -966,6 +966,10 @@ export default function HomePage() {
     return String(a.key).localeCompare(String(b.key));
   });
 
+  const firstTabbedGroupKey = homepageRenderItems.find(
+    (item) => item.type === "TABBED_GROUP",
+  )?.key;
+
   const activeBanner = topBanners[activeBannerIndex];
 
   const handlePrevBanner = () => {
@@ -1809,11 +1813,11 @@ export default function HomePage() {
 
           return (
             <section
+              key={item.key}
               id={
-                groupCode === "DEFAULT_TAB_GROUP" ? "featured-tabs" : undefined
+                item.key === firstTabbedGroupKey ? "featured-tabs" : undefined
               }
               className="home-tabbed-section"
-              key={item.key}
             >
               <div className="home-tab-header">
                 {sortedTabs.map((tab) => (
