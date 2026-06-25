@@ -20,6 +20,15 @@ import {
   deleteHomeSection,
 } from "../services/homeSectionApi";
 
+import {
+  getSectionBanners,
+  createSectionBanner,
+  updateSectionBanner,
+  deleteSectionBanner,
+  setSectionBannerProducts,
+  getSectionBannerDetail,
+} from "../services/homeSectionBannerApi";
+
 import { useEffect, useState } from "react";
 
 import {
@@ -163,6 +172,27 @@ export default function AdminDashboard() {
 
   const [homeSections, setHomeSections] = useState([]);
 
+  const [selectedBannerSectionId, setSelectedBannerSectionId] = useState("");
+
+  const [sectionBanners, setSectionBanners] = useState([]);
+
+  const [editingSectionBannerId, setEditingSectionBannerId] = useState(null);
+
+  const [sectionBannerProductIds, setSectionBannerProductIds] = useState([]);
+
+  const [sectionBannerForm, setSectionBannerForm] = useState({
+    imageUrl: "",
+    title: "",
+    subtitle: "",
+    targetType: "COLLECTION",
+    targetUrl: "",
+    targetProductId: "",
+    slideGroup: 1,
+    position: "",
+    sortOrder: 1,
+    active: true,
+  });
+
   const [editingSectionId, setEditingSectionId] = useState(null);
 
   const [sectionForm, setSectionForm] = useState({
@@ -185,10 +215,12 @@ export default function AdminDashboard() {
     groupCode: "",
     tabTitle: "",
     tabOrder: 1,
-    active: true,
     dealEndTime: "",
     dealSubtitle: "",
     dealTheme: "RED",
+
+    autoSlide: true,
+    slideInterval: 4000,
   });
 
   const [activeMenu, setActiveMenu] = useState("overview");
@@ -1599,6 +1631,14 @@ export default function AdminDashboard() {
     });
   };
 
+  const isBannerSectionType = (sectionType) => {
+    return [
+      "BANNER_SLIDER_LARGE",
+      "DOUBLE_BANNER_SLIDER",
+      "PRODUCT_BANNER_SLIDER",
+    ].includes(sectionType);
+  };
+
   const resetSectionForm = () => {
     setEditingSectionId(null);
 
@@ -1627,6 +1667,9 @@ export default function AdminDashboard() {
       dealEndTime: "",
       dealSubtitle: "",
       dealTheme: "RED",
+
+      autoSlide: true,
+      slideInterval: 4000,
     });
   };
 
@@ -1650,6 +1693,8 @@ export default function AdminDashboard() {
       tabOrder: Number(sectionForm.tabOrder) || 1,
 
       productRows: Number(sectionForm.productRows) || 1,
+
+      slideInterval: Number(sectionForm.slideInterval) || 4000,
     };
 
     if (payload.sectionType === "DEAL_CARD") {
@@ -1695,10 +1740,32 @@ export default function AdminDashboard() {
       };
     }
 
+    if (isBannerSectionType(payload.sectionType)) {
+      payload = {
+        ...payload,
+
+        productId: null,
+        category: "",
+        brand: "",
+        badgeText: "",
+        shortDescription: "",
+        bannerImage: "",
+        bannerLink: "",
+        leftBannerImage: "",
+        leftBannerLink: "",
+        productRows: 1,
+        limitProduct: 0,
+        groupCode: "",
+        tabTitle: "",
+        tabOrder: 1,
+      };
+    }
+
     if (
       payload.sectionType !== "DEAL_CARD" &&
       payload.sectionType !== "TABBED_SECTION" &&
-      payload.sectionType !== "GOLDEN_HOUR_DEAL"
+      payload.sectionType !== "GOLDEN_HOUR_DEAL" &&
+      !isBannerSectionType(payload.sectionType)
     ) {
       payload = {
         ...payload,
@@ -1712,6 +1779,7 @@ export default function AdminDashboard() {
         tabOrder: 1,
       };
     }
+
     try {
       if (editingSectionId) {
         await updateHomeSection(editingSectionId, payload);
@@ -1746,26 +1814,27 @@ export default function AdminDashboard() {
       shortDescription: section.shortDescription || "",
       bannerImage: section.bannerImage || "",
       bannerLink: section.bannerLink || "",
+
       leftBannerImage: section.leftBannerImage || "",
-
       leftBannerLink: section.leftBannerLink || "",
-
       productRows: String(section.productRows || 1),
 
       limitProduct: section.limitProduct || 8,
       sortOrder: section.sortOrder || 1,
 
       groupCode: section.groupCode || "",
-
       tabTitle: section.tabTitle || "",
-
       tabOrder: section.tabOrder || 1,
+
       active: section.active === undefined ? true : section.active,
+
       dealEndTime: section.dealEndTime || "",
-
       dealSubtitle: section.dealSubtitle || "",
-
       dealTheme: section.dealTheme || "RED",
+
+      autoSlide: section.autoSlide === undefined ? true : section.autoSlide,
+
+      slideInterval: section.slideInterval || 4000,
     });
   };
 
@@ -1784,6 +1853,198 @@ export default function AdminDashboard() {
       alert("Lỗi khi xóa khối trang chủ");
     }
   };
+
+  const fetchSectionBanners = async (sectionId) => {
+    if (!sectionId) {
+      setSectionBanners([]);
+      return;
+    }
+
+    try {
+      const data = await getSectionBanners(sectionId);
+
+      setSectionBanners(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.log(error);
+      alert("Không thể tải danh sách banner của khối");
+    }
+  };
+
+  const resetSectionBannerForm = () => {
+    setEditingSectionBannerId(null);
+
+    setSectionBannerProductIds([]);
+
+    setSectionBannerForm({
+      imageUrl: "",
+      title: "",
+      subtitle: "",
+      targetType: "COLLECTION",
+      targetUrl: "",
+      targetProductId: "",
+      slideGroup: 1,
+      position: "",
+      sortOrder: 1,
+      active: true,
+    });
+  };
+
+  const handleSelectBannerSection = async (sectionId) => {
+    setSelectedBannerSectionId(sectionId);
+    resetSectionBannerForm();
+    await fetchSectionBanners(sectionId);
+  };
+
+  const handleSectionBannerChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    setSectionBannerForm({
+      ...sectionBannerForm,
+      [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
+  const handleToggleSectionBannerProduct = (productId) => {
+    const idNumber = Number(productId);
+
+    setSectionBannerProductIds((prev) => {
+      if (prev.includes(idNumber)) {
+        return prev.filter((id) => id !== idNumber);
+      }
+
+      return [...prev, idNumber];
+    });
+  };
+
+  const handleSaveSectionBanner = async (e) => {
+    e.preventDefault();
+
+    if (!selectedBannerSectionId) {
+      alert("Vui lòng chọn khối cần quản lý banner");
+      return;
+    }
+
+    if (!sectionBannerForm.imageUrl) {
+      alert("Vui lòng chọn ảnh banner");
+      return;
+    }
+
+    if (!sectionBannerForm.title.trim()) {
+      alert("Vui lòng nhập tiêu đề banner");
+      return;
+    }
+
+    if (
+      sectionBannerForm.targetType === "PRODUCT" &&
+      !sectionBannerForm.targetProductId
+    ) {
+      alert("Vui lòng chọn sản phẩm đích");
+      return;
+    }
+
+    const payload = {
+      ...sectionBannerForm,
+
+      targetProductId: sectionBannerForm.targetProductId
+        ? Number(sectionBannerForm.targetProductId)
+        : null,
+
+      slideGroup: Number(sectionBannerForm.slideGroup) || 1,
+
+      sortOrder: Number(sectionBannerForm.sortOrder) || 1,
+    };
+
+    try {
+      let savedBanner;
+
+      if (editingSectionBannerId) {
+        savedBanner = await updateSectionBanner(
+          editingSectionBannerId,
+          payload,
+        );
+      } else {
+        savedBanner = await createSectionBanner(
+          selectedBannerSectionId,
+          payload,
+        );
+      }
+
+      if (payload.targetType === "COLLECTION") {
+        await setSectionBannerProducts(savedBanner.id, sectionBannerProductIds);
+      }
+
+      alert(
+        editingSectionBannerId
+          ? "Cập nhật banner thành công"
+          : "Thêm banner thành công",
+      );
+
+      resetSectionBannerForm();
+
+      await fetchSectionBanners(selectedBannerSectionId);
+    } catch (error) {
+      console.log(error);
+      alert("Lỗi khi lưu banner của khối");
+    }
+  };
+
+  const handleEditSectionBanner = async (banner) => {
+    setEditingSectionBannerId(banner.id);
+
+    setSectionBannerForm({
+      imageUrl: banner.imageUrl || "",
+      title: banner.title || "",
+      subtitle: banner.subtitle || "",
+      targetType: banner.targetType || "COLLECTION",
+      targetUrl: banner.targetUrl || "",
+      targetProductId: banner.targetProductId || "",
+      slideGroup: banner.slideGroup || 1,
+      position: banner.position || "",
+      sortOrder: banner.sortOrder || 1,
+      active: banner.active === undefined ? true : banner.active,
+    });
+
+    try {
+      const detail = await getSectionBannerDetail(banner.id);
+
+      const ids = Array.isArray(detail.products)
+        ? detail.products.map((product) => Number(product.id))
+        : [];
+
+      setSectionBannerProductIds(ids);
+    } catch (error) {
+      console.log(error);
+      setSectionBannerProductIds([]);
+    }
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const handleDeleteSectionBanner = async (bannerId) => {
+    const confirmed = window.confirm("Bạn có chắc muốn xóa banner này?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteSectionBanner(bannerId);
+
+      await fetchSectionBanners(selectedBannerSectionId);
+
+      alert("Xóa banner thành công");
+    } catch (error) {
+      console.log(error);
+      alert("Lỗi khi xóa banner");
+    }
+  };
+
+  const selectedBannerSection = homeSections.find(
+    (section) => Number(section.id) === Number(selectedBannerSectionId),
+  );
 
   const handleFlashSaleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -3286,7 +3547,45 @@ export default function AdminDashboard() {
                     <option value="NEW_ARRIVAL">Hàng mới về</option>
 
                     <option value="CATEGORY_GRID">Lưới danh mục nhanh</option>
+                    <option value="BANNER_SLIDER_LARGE">
+                      Banner lớn tự chạy
+                    </option>
+
+                    <option value="DOUBLE_BANNER_SLIDER">
+                      2 banner ngang tự chạy
+                    </option>
+
+                    <option value="PRODUCT_BANNER_SLIDER">
+                      Banner sản phẩm tự chạy
+                    </option>
                   </select>
+
+                  {isBannerSectionType(sectionForm.sectionType) && (
+                    <>
+                      <label className="homepage-check">
+                        <input
+                          type="checkbox"
+                          name="autoSlide"
+                          checked={sectionForm.autoSlide}
+                          onChange={handleSectionChange}
+                        />
+                        Tự động chuyển banner
+                      </label>
+
+                      <input
+                        type="number"
+                        name="slideInterval"
+                        value={sectionForm.slideInterval}
+                        onChange={handleSectionChange}
+                        placeholder="Thời gian chuyển banner, ví dụ 4000"
+                        min="1000"
+                      />
+
+                      <p className="admin-form-hint">
+                        1000 = 1 giây, 4000 = 4 giây.
+                      </p>
+                    </>
+                  )}
 
                   {sectionForm.sectionType === "DEAL_CARD" && (
                     <div className="section-form-group">
@@ -3428,7 +3727,8 @@ export default function AdminDashboard() {
                   )}
 
                   {sectionForm.sectionType !== "DEAL_CARD" &&
-                    sectionForm.sectionType !== "GOLDEN_HOUR_DEAL" && (
+                    sectionForm.sectionType !== "GOLDEN_HOUR_DEAL" &&
+                    !isBannerSectionType(sectionForm.sectionType) && (
                       <div className="section-form-group">
                         <p className="admin-form-hint">
                           Dùng để tạo khối sản phẩm lớn bên dưới trang Home như
@@ -3724,6 +4024,265 @@ export default function AdminDashboard() {
             </div>
 
             <div className="homepage-list-card">
+              {selectedBannerSectionId && (
+                <div className="homepage-card">
+                  <h3>
+                    Quản lý banner của khối:{" "}
+                    {selectedBannerSection?.title || selectedBannerSectionId}
+                  </h3>
+
+                  <form onSubmit={handleSaveSectionBanner}>
+                    <div className="admin-upload-field">
+                      <span>Ảnh banner</span>
+
+                      <label className="admin-upload-box">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) =>
+                            handleUploadToForm(
+                              event,
+                              setSectionBannerForm,
+                              "imageUrl",
+                            )
+                          }
+                        />
+
+                        <div>
+                          <strong>Chọn ảnh banner</strong>
+                          <small>Ảnh cho khối banner mới</small>
+                        </div>
+                      </label>
+
+                      {sectionBannerForm.imageUrl && (
+                        <div className="admin-upload-preview">
+                          <img
+                            src={sectionBannerForm.imageUrl}
+                            alt="Banner preview"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSectionBannerForm((prev) => ({
+                                ...prev,
+                                imageUrl: "",
+                              }))
+                            }
+                          >
+                            Xóa ảnh
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      name="title"
+                      value={sectionBannerForm.title}
+                      onChange={handleSectionBannerChange}
+                      placeholder="Tiêu đề banner"
+                    />
+
+                    <input
+                      name="subtitle"
+                      value={sectionBannerForm.subtitle}
+                      onChange={handleSectionBannerChange}
+                      placeholder="Mô tả ngắn"
+                    />
+
+                    <select
+                      name="targetType"
+                      value={sectionBannerForm.targetType}
+                      onChange={handleSectionBannerChange}
+                    >
+                      <option value="COLLECTION">
+                        Click ra danh sách sản phẩm
+                      </option>
+
+                      <option value="PRODUCT">
+                        Click ra chi tiết sản phẩm
+                      </option>
+
+                      <option value="CUSTOM_LINK">Link tùy chỉnh</option>
+                    </select>
+
+                    {sectionBannerForm.targetType === "PRODUCT" && (
+                      <select
+                        name="targetProductId"
+                        value={sectionBannerForm.targetProductId}
+                        onChange={handleSectionBannerChange}
+                      >
+                        <option value="">Chọn sản phẩm đích</option>
+
+                        {products.map((product) => (
+                          <option key={product.id} value={product.id}>
+                            {product.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    {sectionBannerForm.targetType === "CUSTOM_LINK" && (
+                      <input
+                        name="targetUrl"
+                        value={sectionBannerForm.targetUrl}
+                        onChange={handleSectionBannerChange}
+                        placeholder="/product/6 hoặc /search?category=Laptop"
+                      />
+                    )}
+
+                    <input
+                      type="number"
+                      name="slideGroup"
+                      value={sectionBannerForm.slideGroup}
+                      onChange={handleSectionBannerChange}
+                      placeholder="Nhóm slide"
+                      min="1"
+                    />
+
+                    {selectedBannerSection?.sectionType ===
+                      "DOUBLE_BANNER_SLIDER" && (
+                      <select
+                        name="position"
+                        value={sectionBannerForm.position}
+                        onChange={handleSectionBannerChange}
+                      >
+                        <option value="">Chọn vị trí banner</option>
+                        <option value="LEFT">Bên trái</option>
+                        <option value="RIGHT">Bên phải</option>
+                      </select>
+                    )}
+
+                    <input
+                      type="number"
+                      name="sortOrder"
+                      value={sectionBannerForm.sortOrder}
+                      onChange={handleSectionBannerChange}
+                      placeholder="Thứ tự"
+                      min="1"
+                    />
+
+                    <label className="homepage-check">
+                      <input
+                        type="checkbox"
+                        name="active"
+                        checked={sectionBannerForm.active}
+                        onChange={handleSectionBannerChange}
+                      />
+                      Hiển thị banner
+                    </label>
+
+                    {sectionBannerForm.targetType === "COLLECTION" && (
+                      <div className="admin-card-sub">
+                        <h4>Sản phẩm hiển thị khi click banner</h4>
+
+                        <div className="product-check-list">
+                          {products.map((product) => (
+                            <label
+                              key={product.id}
+                              className="product-check-item"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={sectionBannerProductIds.includes(
+                                  Number(product.id),
+                                )}
+                                onChange={() =>
+                                  handleToggleSectionBannerProduct(product.id)
+                                }
+                              />
+
+                              <span>{product.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <button type="submit">
+                      {editingSectionBannerId
+                        ? "Cập nhật banner"
+                        : "Thêm banner"}
+                    </button>
+
+                    {editingSectionBannerId && (
+                      <button
+                        type="button"
+                        className="cancel-homepage-btn"
+                        onClick={resetSectionBannerForm}
+                      >
+                        Hủy
+                      </button>
+                    )}
+                  </form>
+
+                  <h3>Danh sách banner trong khối</h3>
+
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Ảnh</th>
+                        <th>Tiêu đề</th>
+                        <th>Kiểu click</th>
+                        <th>Nhóm</th>
+                        <th>Vị trí</th>
+                        <th>Thứ tự</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {sectionBanners.map((banner) => (
+                        <tr key={banner.id}>
+                          <td>{banner.id}</td>
+
+                          <td>
+                            {banner.imageUrl && (
+                              <img
+                                src={banner.imageUrl}
+                                alt=""
+                                style={{
+                                  width: "90px",
+                                  borderRadius: "8px",
+                                }}
+                              />
+                            )}
+                          </td>
+
+                          <td>{banner.title}</td>
+                          <td>{banner.targetType}</td>
+                          <td>{banner.slideGroup}</td>
+                          <td>{banner.position || "-"}</td>
+                          <td>{banner.sortOrder}</td>
+
+                          <td>{banner.active ? "Hiển thị" : "Đang ẩn"}</td>
+
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => handleEditSectionBanner(banner)}
+                            >
+                              Sửa
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteSectionBanner(banner.id)
+                              }
+                            >
+                              Xóa
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               <h3>Danh sách khối trang chủ</h3>
 
               <table>
@@ -3769,6 +4328,17 @@ export default function AdminDashboard() {
                       <td>{section.active ? "Hiển thị" : "Đang ẩn"}</td>
 
                       <td>
+                        {isBannerSectionType(section.sectionType) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSelectBannerSection(section.id)
+                            }
+                          >
+                            Quản lý banner
+                          </button>
+                        )}
+
                         <button onClick={() => handleEditSection(section)}>
                           Sửa
                         </button>

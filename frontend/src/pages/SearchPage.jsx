@@ -6,8 +6,15 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import HomeProductCard from "../components/home/HomeProductCard";
 
 import { getProducts } from "../services/productApi";
+
+import { getSectionBannerDetail } from "../services/homeSectionBannerApi";
+
+import { getActivePromotions } from "../services/promotionApi";
+
+import { getActiveFlashSale } from "../services/flashSaleApi";
 
 export default function SearchPage() {
   const [searchParams] = useSearchParams();
@@ -30,11 +37,29 @@ export default function SearchPage() {
 
   const sortParam = searchParams.get("sort") || "";
 
+  const bannerIdParam = searchParams.get("bannerId") || "";
+
   const [products, setProducts] = useState([]);
+
+  const [bannerInfo, setBannerInfo] = useState(null);
+
+  const [bannerProducts, setBannerProducts] = useState([]);
+
+  const [activePromotions, setActivePromotions] = useState([]);
+
+  const [activeFlashSale, setActiveFlashSale] = useState(null);
+
+  const [loadingBanner, setLoadingBanner] = useState(false);
 
   useEffect(() => {
     fetchProducts();
+    fetchActivePromotions();
+    fetchActiveFlashSale();
   }, []);
+
+  useEffect(() => {
+    fetchBannerProducts(bannerIdParam);
+  }, [bannerIdParam]);
 
   const fetchProducts = async () => {
     try {
@@ -43,6 +68,57 @@ export default function SearchPage() {
       setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
       console.log(error);
+
+      setProducts([]);
+    }
+  };
+
+  const fetchBannerProducts = async (bannerId) => {
+    if (!bannerId) {
+      setBannerInfo(null);
+      setBannerProducts([]);
+      return;
+    }
+
+    try {
+      setLoadingBanner(true);
+
+      const detail = await getSectionBannerDetail(bannerId);
+
+      setBannerInfo(detail?.banner || null);
+
+      setBannerProducts(Array.isArray(detail?.products) ? detail.products : []);
+    } catch (error) {
+      console.log(error);
+
+      setBannerInfo(null);
+      setBannerProducts([]);
+    } finally {
+      setLoadingBanner(false);
+    }
+  };
+
+  const fetchActivePromotions = async () => {
+    try {
+      const data = await getActivePromotions();
+
+      setActivePromotions(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.log(error);
+
+      setActivePromotions([]);
+    }
+  };
+
+  const fetchActiveFlashSale = async () => {
+    try {
+      const data = await getActiveFlashSale();
+
+      setActiveFlashSale(data || null);
+    } catch (error) {
+      console.log(error);
+
+      setActiveFlashSale(null);
     }
   };
 
@@ -50,6 +126,122 @@ export default function SearchPage() {
     return String(value || "")
       .toLowerCase()
       .trim();
+  };
+
+  const getPromotionForProduct = (productId) => {
+    const today = new Date();
+
+    return activePromotions.find((promotion) => {
+      if (!promotion.active) {
+        return false;
+      }
+
+      if (Number(promotion.productId) !== Number(productId)) {
+        return false;
+      }
+
+      const startDate = promotion.startDate
+        ? new Date(promotion.startDate)
+        : null;
+
+      const endDate = promotion.endDate ? new Date(promotion.endDate) : null;
+
+      if (startDate && today < startDate) {
+        return false;
+      }
+
+      if (endDate && today > endDate) {
+        return false;
+      }
+
+      return true;
+    });
+  };
+
+  const getDiscountPrice = (price, discountPercent) => {
+    return Math.round(
+      (Number(price || 0) * (100 - Number(discountPercent || 0))) / 100,
+    );
+  };
+
+  const getFlashSaleItemForProduct = (productId) => {
+    const item = activeFlashSale?.items?.find(
+      (flashItem) => Number(flashItem.productId) === Number(productId),
+    );
+
+    if (!item) {
+      return null;
+    }
+
+    const salePrice = Number(item.salePrice || 0);
+
+    const originalPrice = Number(item.originalPrice || 0);
+
+    const saleQuantity = Number(item.saleQuantity || 0);
+
+    const soldQuantity = Number(item.soldQuantity || 0);
+
+    const remainingQuantity = Math.max(0, saleQuantity - soldQuantity);
+
+    if (
+      salePrice <= 0 ||
+      originalPrice <= 0 ||
+      salePrice >= originalPrice ||
+      remainingQuantity <= 0
+    ) {
+      return null;
+    }
+
+    return item;
+  };
+
+  const getEffectiveSearchPrice = (product) => {
+    const productOriginalPrice = Number(product?.price || 0);
+
+    const flashSaleItem = getFlashSaleItemForProduct(product.id);
+
+    if (flashSaleItem) {
+      const originalPrice = Number(
+        flashSaleItem.originalPrice || productOriginalPrice,
+      );
+
+      const finalPrice = Number(flashSaleItem.salePrice);
+
+      const calculatedPercent =
+        originalPrice > 0
+          ? Math.round(((originalPrice - finalPrice) * 100) / originalPrice)
+          : 0;
+
+      return {
+        originalPrice,
+        finalPrice,
+        priceSource: "FLASH_SALE",
+        discountPercent:
+          Number(flashSaleItem.discountPercent || 0) || calculatedPercent,
+        flashSaleItemId: flashSaleItem.itemId,
+      };
+    }
+
+    const promotion = getPromotionForProduct(product.id);
+
+    if (promotion) {
+      const discountPercent = Number(promotion.discountPercent || 0);
+
+      return {
+        originalPrice: productOriginalPrice,
+        finalPrice: getDiscountPrice(productOriginalPrice, discountPercent),
+        priceSource: "PROMOTION",
+        discountPercent,
+        promotionId: promotion.id,
+      };
+    }
+
+    return {
+      originalPrice: productOriginalPrice,
+      finalPrice: productOriginalPrice,
+      priceSource: "REGULAR",
+      discountPercent: 0,
+    };
   };
 
   const searchResults = useMemo(() => {
@@ -65,12 +257,12 @@ export default function SearchPage() {
 
     const maxPrice = Number(maxPriceParam) || 0;
 
-    /*
-        Có keyword thì lọc theo:
-        - tên sản phẩm
-        - danh mục
-        - thương hiệu
-      */
+    if (isPromotionPage) {
+      result = result.filter((product) =>
+        Boolean(getPromotionForProduct(product.id)),
+      );
+    }
+
     if (text) {
       result = result.filter((product) => {
         const name = normalizeText(product.name);
@@ -87,11 +279,6 @@ export default function SearchPage() {
       });
     }
 
-    /*
-        Lọc theo danh mục.
-        Dùng so sánh mềm để tránh lỗi:
-        Laptop vs laptop vs Laptop Gaming
-      */
     if (category) {
       result = result.filter((product) => {
         const productCategory = normalizeText(product.category);
@@ -104,11 +291,6 @@ export default function SearchPage() {
       });
     }
 
-    /*
-        Lọc theo thương hiệu.
-        Dùng so sánh mềm để tránh lỗi:
-        ASUS vs Asus vs asus
-      */
     if (brand) {
       result = result.filter((product) => {
         const productBrand = normalizeText(product.brand);
@@ -154,9 +336,22 @@ export default function SearchPage() {
     minPriceParam,
     maxPriceParam,
     sortParam,
+    isPromotionPage,
+    activePromotions,
   ]);
 
+  const displayedProducts = bannerIdParam ? bannerProducts : searchResults;
+
   const getResultDescription = () => {
+    if (bannerIdParam) {
+      return (
+        <>
+          Sản phẩm thuộc chương trình:
+          <strong> {bannerInfo?.title || "Banner khuyến mãi"}</strong>
+        </>
+      );
+    }
+
     if (keyword) {
       return (
         <>
@@ -188,8 +383,36 @@ export default function SearchPage() {
     return <>Chưa có từ khóa hoặc bộ lọc</>;
   };
 
+  const getPageTitle = () => {
+    if (bannerIdParam) {
+      return bannerInfo?.title || "Danh sách sản phẩm";
+    }
+
+    if (isPromotionPage) {
+      return "Sản phẩm đang khuyến mãi";
+    }
+
+    return `Có ${displayedProducts.length} kết quả tìm kiếm phù hợp`;
+  };
+
+  const getPageSubtitle = () => {
+    if (bannerIdParam) {
+      return bannerInfo?.subtitle || "Danh sách sản phẩm được chọn từ banner";
+    }
+
+    if (isPromotionPage) {
+      return "Tổng hợp các sản phẩm có ưu đãi tốt nhất tại ElectroShop";
+    }
+
+    return getResultDescription();
+  };
+
   return (
-    <div className="search-page">
+    <div
+      className={
+        bannerIdParam ? "search-page banner-search-page" : "search-page"
+      }
+    >
       <Header />
 
       <div className="search-breadcrumb">
@@ -197,75 +420,63 @@ export default function SearchPage() {
 
         <span>›</span>
 
-        <strong>{isPromotionPage ? "Khuyến mãi" : "Tìm kiếm"}</strong>
+        <strong>
+          {bannerIdParam
+            ? "Bộ sưu tập"
+            : isPromotionPage
+              ? "Khuyến mãi"
+              : "Tìm kiếm"}
+        </strong>
       </div>
+
+      {bannerIdParam && bannerInfo?.imageUrl && (
+        <div className="search-banner-hero">
+          <img
+            src={bannerInfo.imageUrl}
+            alt={bannerInfo.title || "Banner khuyến mãi"}
+          />
+        </div>
+      )}
 
       <section className="search-result-wrapper">
         <div className="search-result-title">
-          {isPromotionPage ? (
-            <div className="promotion-page-heading">
-              <h1>Sản phẩm đang khuyến mãi</h1>
+          <div className="search-result-title-left">
+            <span className="search-result-badge">
+              {bannerIdParam ? "Bộ sưu tập nổi bật" : "Kết quả tìm kiếm"}
+            </span>
 
-              <p>Tổng hợp các sản phẩm có ưu đãi tốt nhất tại ElectroShop</p>
-            </div>
-          ) : (
-            <>
-              <h2>Có {searchResults.length} kết quả tìm kiếm phù hợp</h2>
+            <h2>{getPageTitle()}</h2>
 
-              <p>{getResultDescription()}</p>
-            </>
-          )}
+            <p>{getPageSubtitle()}</p>
+          </div>
+
+          <div className="search-result-title-right">
+            <span className="search-result-count">
+              {displayedProducts.length} sản phẩm
+            </span>
+          </div>
         </div>
 
-        {searchResults.length > 0 ? (
+        {loadingBanner ? (
+          <div className="search-empty-page">
+            <div className="search-empty-icon">⏳</div>
+
+            <h3>Đang tải sản phẩm...</h3>
+          </div>
+        ) : displayedProducts.length > 0 ? (
           <div className="search-product-grid">
-            {searchResults.map((product) => (
-              <div
-                className="search-home-card"
-                key={product.id}
-                onClick={() => navigate(`/product/${product.id}`)}
-              >
-                <div className="search-sale-badge">Giảm 10%</div>
+            {displayedProducts.map((product) => {
+              const priceInfo = getEffectiveSearchPrice(product);
 
-                <div className="search-installment">Trả góp 0%</div>
-
-                <div className="search-card-image">
-                  <img src={product.image} alt={product.name} />
-                </div>
-
-                <div className="search-card-info">
-                  <h3>{product.name}</h3>
-
-                  <p className="search-card-price">
-                    {Number(product.price || 0).toLocaleString("vi-VN")}đ
-                  </p>
-
-                  <div className="search-discount blue">
-                    Thành viên giảm thêm 300.000đ
-                  </div>
-
-                  <div className="search-discount purple">
-                    Sinh viên giảm thêm 200.000đ
-                  </div>
-
-                  <p className="search-gift">
-                    Trả góp 0% - Đổi trả dễ dàng trong 7 ngày
-                  </p>
-
-                  <div className="search-card-bottom">
-                    <span>⭐ 5</span>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      ♡ Yêu thích
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              return (
+                <HomeProductCard
+                  key={product.id}
+                  product={product}
+                  priceInfo={priceInfo}
+                  onOpen={() => navigate(`/product/${product.id}`)}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="search-empty-page">
@@ -274,8 +485,9 @@ export default function SearchPage() {
             <h3>Không tìm thấy sản phẩm phù hợp</h3>
 
             <p>
-              Hãy thử tìm bằng tên sản phẩm, danh mục, thương hiệu hoặc khoảng
-              giá khác.
+              {bannerIdParam
+                ? "Banner này chưa được gắn sản phẩm. Hãy vào Admin → Trang chủ → Quản lý banner để chọn sản phẩm."
+                : "Hãy thử tìm bằng tên sản phẩm, danh mục, thương hiệu hoặc khoảng giá khác."}
             </p>
           </div>
         )}

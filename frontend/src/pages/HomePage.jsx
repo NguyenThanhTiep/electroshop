@@ -23,6 +23,8 @@ import { getBannersByPosition } from "../services/bannerApi";
 
 import { getActiveHomeSections } from "../services/homeSectionApi";
 
+import { getActiveSectionBanners } from "../services/homeSectionBannerApi";
+
 import { getActiveFlashSale } from "../services/flashSaleApi";
 
 import { getActivePromotions } from "../services/promotionApi";
@@ -30,6 +32,248 @@ import { getActivePromotions } from "../services/promotionApi";
 import { getActiveCoupons } from "../services/couponApi";
 
 import { addToCart } from "../utils/cartUtils";
+
+function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const activeBanners = Array.isArray(banners)
+    ? banners.filter((banner) => banner.active !== false)
+    : [];
+
+  const sectionType = section.sectionType;
+
+  const groupedSlides = useMemo(() => {
+    const groups = {};
+
+    activeBanners.forEach((banner) => {
+      const key = Number(banner.slideGroup || 1);
+
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+
+      groups[key].push(banner);
+    });
+
+    return Object.values(groups).map((group) =>
+      group.sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)),
+    );
+  }, [activeBanners]);
+
+  const totalSlides =
+    sectionType === "BANNER_SLIDER_LARGE"
+      ? activeBanners.length
+      : groupedSlides.length;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [section.id, totalSlides]);
+
+  useEffect(() => {
+    if (!section.autoSlide || totalSlides <= 1) {
+      return;
+    }
+
+    const interval = Math.max(1000, Number(section.slideInterval || 4000));
+
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => (prev >= totalSlides - 1 ? 0 : prev + 1));
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [section.autoSlide, section.slideInterval, totalSlides]);
+
+  const goPrev = (e) => {
+    e.stopPropagation();
+
+    setActiveIndex((prev) => (prev === 0 ? totalSlides - 1 : prev - 1));
+  };
+
+  const goNext = (e) => {
+    e.stopPropagation();
+
+    setActiveIndex((prev) => (prev >= totalSlides - 1 ? 0 : prev + 1));
+  };
+
+  if (activeBanners.length === 0) {
+    return null;
+  }
+
+  if (sectionType === "BANNER_SLIDER_LARGE") {
+    const banner = activeBanners[activeIndex];
+
+    if (!banner) {
+      return null;
+    }
+
+    return (
+      <section className="home-dynamic-banner-section banner-large-section">
+        <div className="home-banner-section-header">
+          <h2>{section.title}</h2>
+        </div>
+
+        <div
+          className="home-large-banner-slide"
+          onClick={() => onBannerClick(banner)}
+        >
+          <img src={banner.imageUrl} alt={banner.title || section.title} />
+
+          <div className="home-banner-overlay">
+            <h3>{banner.title}</h3>
+
+            {banner.subtitle && <p>{banner.subtitle}</p>}
+
+            <button type="button">Xem ngay</button>
+          </div>
+        </div>
+
+        {totalSlides > 1 && (
+          <>
+            <button
+              type="button"
+              className="home-banner-slider-btn left"
+              onClick={goPrev}
+            >
+              ❮
+            </button>
+
+            <button
+              type="button"
+              className="home-banner-slider-btn right"
+              onClick={goNext}
+            >
+              ❯
+            </button>
+
+            <div className="home-banner-dots">
+              {activeBanners.map((bannerItem, index) => (
+                <button
+                  key={bannerItem.id}
+                  type="button"
+                  className={index === activeIndex ? "active" : ""}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveIndex(index);
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    );
+  }
+
+  if (sectionType === "DOUBLE_BANNER_SLIDER") {
+    const currentGroup = groupedSlides[activeIndex] || [];
+
+    const leftBanner =
+      currentGroup.find((banner) => banner.position === "LEFT") ||
+      currentGroup[0];
+
+    const rightBanner =
+      currentGroup.find((banner) => banner.position === "RIGHT") ||
+      currentGroup[1];
+
+    return (
+      <section className="home-dynamic-banner-section double-banner-section">
+        <div className="home-banner-section-header">
+          <h2>{section.title}</h2>
+        </div>
+
+        <div className="double-banner-grid">
+          {[leftBanner, rightBanner].filter(Boolean).map((banner) => (
+            <div
+              key={banner.id}
+              className="double-banner-card"
+              onClick={() => onBannerClick(banner)}
+            >
+              <img src={banner.imageUrl} alt={banner.title} />
+
+              <div className="double-banner-info">
+                <h3>{banner.title}</h3>
+
+                {banner.subtitle && <p>{banner.subtitle}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {totalSlides > 1 && (
+          <>
+            <button
+              type="button"
+              className="home-banner-slider-btn left"
+              onClick={goPrev}
+            >
+              ❮
+            </button>
+
+            <button
+              type="button"
+              className="home-banner-slider-btn right"
+              onClick={goNext}
+            >
+              ❯
+            </button>
+          </>
+        )}
+      </section>
+    );
+  }
+
+  if (sectionType === "PRODUCT_BANNER_SLIDER") {
+    const currentGroup = groupedSlides[activeIndex] || [];
+
+    return (
+      <section className="home-dynamic-banner-section product-banner-section">
+        <div className="home-banner-section-header">
+          <h2>{section.title}</h2>
+        </div>
+
+        <div className="product-banner-grid">
+          {currentGroup.slice(0, 4).map((banner) => (
+            <div
+              key={banner.id}
+              className="product-banner-card"
+              onClick={() => onBannerClick(banner)}
+            >
+              <img src={banner.imageUrl} alt={banner.title} />
+
+              <div className="product-banner-info">
+                <h3>{banner.title}</h3>
+
+                {banner.subtitle && <p>{banner.subtitle}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {totalSlides > 1 && (
+          <>
+            <button
+              type="button"
+              className="home-banner-slider-btn left"
+              onClick={goPrev}
+            >
+              ❮
+            </button>
+
+            <button
+              type="button"
+              className="home-banner-slider-btn right"
+              onClick={goNext}
+            >
+              ❯
+            </button>
+          </>
+        )}
+      </section>
+    );
+  }
+
+  return null;
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -92,6 +336,8 @@ export default function HomePage() {
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
   const [homeSections, setHomeSections] = useState([]);
+
+  const [sectionBannerMap, setSectionBannerMap] = useState({});
 
   const [activeTabByGroup, setActiveTabByGroup] = useState({});
 
@@ -221,7 +467,29 @@ export default function HomePage() {
 
       const sectionData = await getActiveHomeSections();
 
-      setHomeSections(Array.isArray(sectionData) ? sectionData : []);
+      const sectionList = Array.isArray(sectionData) ? sectionData : [];
+
+      setHomeSections(sectionList);
+
+      const bannerSections = sectionList.filter((section) =>
+        isBannerSectionType(section.sectionType),
+      );
+
+      const bannerEntries = await Promise.all(
+        bannerSections.map(async (section) => {
+          try {
+            const banners = await getActiveSectionBanners(section.id);
+
+            return [section.id, Array.isArray(banners) ? banners : []];
+          } catch (error) {
+            console.log(error);
+
+            return [section.id, []];
+          }
+        }),
+      );
+
+      setSectionBannerMap(Object.fromEntries(bannerEntries));
     } catch (error) {
       console.log(error);
     }
@@ -611,9 +879,21 @@ export default function HomePage() {
     });
   };
 
+  const isBannerSectionType = (sectionType) => {
+    return [
+      "BANNER_SLIDER_LARGE",
+      "DOUBLE_BANNER_SLIDER",
+      "PRODUCT_BANNER_SLIDER",
+    ].includes(sectionType);
+  };
+
   const getProductById = (productId) => {
     return products.find((product) => Number(product.id) === Number(productId));
   };
+
+  const bannerHomeSections = homeSections
+    .filter((section) => isBannerSectionType(section.sectionType))
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
 
   const dealCardSections = homeSections
     .filter((section) => section.sectionType === "DEAL_CARD")
@@ -628,7 +908,8 @@ export default function HomePage() {
     (section) =>
       section.sectionType !== "DEAL_CARD" &&
       section.sectionType !== "TABBED_SECTION" &&
-      section.sectionType !== "GOLDEN_HOUR_DEAL",
+      section.sectionType !== "GOLDEN_HOUR_DEAL" &&
+      !isBannerSectionType(section.sectionType),
   );
 
   const groupedTabbedSections = tabbedSections.reduce((groups, section) => {
@@ -859,6 +1140,56 @@ export default function HomePage() {
     }));
   }, [keywordFromUrl, categoryFromUrl]);
 
+  const handleHomeLinkClick = (link) => {
+    const cleanLink = String(link || "").trim();
+
+    if (!cleanLink) {
+      return;
+    }
+
+    if (cleanLink.startsWith("http://") || cleanLink.startsWith("https://")) {
+      try {
+        const url = new URL(cleanLink);
+
+        if (url.origin === window.location.origin) {
+          navigate(`${url.pathname}${url.search}${url.hash}`);
+          return;
+        }
+
+        window.location.href = cleanLink;
+        return;
+      } catch (error) {
+        console.log(error);
+        return;
+      }
+    }
+
+    navigate(cleanLink.startsWith("/") ? cleanLink : `/${cleanLink}`);
+  };
+
+  const handleSectionBannerClick = (banner) => {
+    const targetType = String(banner.targetType || "COLLECTION")
+      .trim()
+      .toUpperCase();
+
+    if (targetType === "PRODUCT") {
+      if (banner.targetProductId) {
+        navigate(`/product/${banner.targetProductId}`);
+        return;
+      }
+
+      handleHomeLinkClick(banner.targetUrl);
+      return;
+    }
+
+    if (targetType === "CUSTOM_LINK") {
+      handleHomeLinkClick(banner.targetUrl);
+      return;
+    }
+
+    navigate(`/search?bannerId=${banner.id}`);
+  };
+
   const scrollProductSlider = (selector, distance) => {
     document.querySelector(selector)?.scrollBy({
       left: distance,
@@ -882,7 +1213,7 @@ export default function HomePage() {
                 className="home-top-banner-item"
                 onClick={() => {
                   if (activeBanner.linkUrl) {
-                    window.location.href = activeBanner.linkUrl;
+                    handleHomeLinkClick(activeBanner.linkUrl);
                   }
                 }}
               >
@@ -1404,6 +1735,16 @@ export default function HomePage() {
             </div>
           </section>
         )}
+
+      {/* KHỐI BANNER MỚI DO ADMIN QUẢN LÝ */}
+      {bannerHomeSections.map((section) => (
+        <HomeDynamicBannerSection
+          key={section.id}
+          section={section}
+          banners={sectionBannerMap[section.id] || []}
+          onBannerClick={handleSectionBannerClick}
+        />
+      ))}
 
       {/* KHỐI SẢN PHẨM DẠNG TAB DO ADMIN QUẢN LÝ */}
 

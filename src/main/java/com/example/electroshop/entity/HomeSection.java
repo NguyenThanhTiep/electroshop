@@ -5,13 +5,11 @@ import lombok.*;
 
 @Entity
 @Table(name = "home_sections")
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
 public class HomeSection {
 
     @Id
@@ -36,6 +34,7 @@ public class HomeSection {
     @Column(length = 1000)
     private String bannerImage;
 
+    @Column(length = 1000)
     private String bannerLink;
 
     @Column(length = 1000)
@@ -58,10 +57,28 @@ public class HomeSection {
 
     private String dealTheme;
 
-    // Dùng cho khối sản phẩm dạng tab
+    /*
+     * Dùng cho khối sản phẩm dạng tab
+     */
     private String groupCode;
 
     private String tabTitle;
 
     private Integer tabOrder;
+
+    /*
+     * Dùng cho các khối banner tự chạy:
+     * BANNER_SLIDER_LARGE
+     * DOUBLE_BANNER_SLIDER
+     * PRODUCT_BANNER_SLIDER
+     */
+    @Builder.Default
+    private Boolean autoSlide = true;
+
+    /*
+     * Thời gian tự đổi banner, tính bằng mili giây.
+     * Ví dụ: 4000 = 4 giây
+     */
+    @Builder.Default
+    private Integer slideInterval = 4000;
 }
