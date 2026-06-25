@@ -904,13 +904,15 @@ export default function HomePage() {
     .filter((section) => section.sectionType === "TABBED_SECTION")
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
 
-  const normalHomeSections = homeSections.filter(
-    (section) =>
-      section.sectionType !== "DEAL_CARD" &&
-      section.sectionType !== "TABBED_SECTION" &&
-      section.sectionType !== "GOLDEN_HOUR_DEAL" &&
-      !isBannerSectionType(section.sectionType),
-  );
+  const normalHomeSections = homeSections
+    .filter(
+      (section) =>
+        section.sectionType !== "DEAL_CARD" &&
+        section.sectionType !== "TABBED_SECTION" &&
+        section.sectionType !== "GOLDEN_HOUR_DEAL" &&
+        !isBannerSectionType(section.sectionType),
+    )
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
 
   const groupedTabbedSections = tabbedSections.reduce((groups, section) => {
     const key = section.groupCode || "DEFAULT_TAB_GROUP";
@@ -923,6 +925,46 @@ export default function HomePage() {
 
     return groups;
   }, {});
+
+  const getSectionSortOrder = (section) => {
+    return Number(section?.sortOrder || 0);
+  };
+
+  const homepageRenderItems = [
+    ...bannerHomeSections.map((section) => ({
+      type: "BANNER_SECTION",
+      key: `banner-${section.id}`,
+      sortOrder: getSectionSortOrder(section),
+      section,
+    })),
+
+    ...Object.entries(groupedTabbedSections).map(([groupCode, sections]) => {
+      const minSortOrder = Math.min(
+        ...sections.map((section) => getSectionSortOrder(section)),
+      );
+
+      return {
+        type: "TABBED_GROUP",
+        key: `tab-${groupCode}`,
+        groupCode,
+        sortOrder: minSortOrder,
+        sections,
+      };
+    }),
+
+    ...normalHomeSections.map((section) => ({
+      type: "PRODUCT_SECTION",
+      key: `section-${section.id}`,
+      sortOrder: getSectionSortOrder(section),
+      section,
+    })),
+  ].sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) {
+      return a.sortOrder - b.sortOrder;
+    }
+
+    return String(a.key).localeCompare(String(b.key));
+  });
 
   const activeBanner = topBanners[activeBannerIndex];
 
@@ -1735,21 +1777,25 @@ export default function HomePage() {
             </div>
           </section>
         )}
+      {/* CÁC KHỐI HOMEPAGE RENDER THEO THỨ TỰ ADMIN THIẾT LẬP */}
 
-      {/* KHỐI BANNER MỚI DO ADMIN QUẢN LÝ */}
-      {bannerHomeSections.map((section) => (
-        <HomeDynamicBannerSection
-          key={section.id}
-          section={section}
-          banners={sectionBannerMap[section.id] || []}
-          onBannerClick={handleSectionBannerClick}
-        />
-      ))}
+      {homepageRenderItems.map((item) => {
+        if (item.type === "BANNER_SECTION") {
+          const section = item.section;
 
-      {/* KHỐI SẢN PHẨM DẠNG TAB DO ADMIN QUẢN LÝ */}
+          return (
+            <HomeDynamicBannerSection
+              key={item.key}
+              section={section}
+              banners={sectionBannerMap[section.id] || []}
+              onBannerClick={handleSectionBannerClick}
+            />
+          );
+        }
 
-      {Object.entries(groupedTabbedSections).map(
-        ([groupCode, sections], index) => {
+        if (item.type === "TABBED_GROUP") {
+          const { groupCode, sections } = item;
+
           const sortedTabs = [...sections].sort(
             (a, b) => Number(a.tabOrder || 0) - Number(b.tabOrder || 0),
           );
@@ -1763,9 +1809,11 @@ export default function HomePage() {
 
           return (
             <section
-              id={index === 0 ? "featured-tabs" : undefined}
+              id={
+                groupCode === "DEFAULT_TAB_GROUP" ? "featured-tabs" : undefined
+              }
               className="home-tabbed-section"
-              key={groupCode}
+              key={item.key}
             >
               <div className="home-tab-header">
                 {sortedTabs.map((tab) => (
@@ -1794,7 +1842,7 @@ export default function HomePage() {
                   className="home-tab-banner"
                   onClick={() => {
                     if (activeTab.bannerLink) {
-                      window.location.href = activeTab.bannerLink;
+                      handleHomeLinkClick(activeTab.bannerLink);
                     }
                   }}
                 >
@@ -1817,7 +1865,7 @@ export default function HomePage() {
                     className="home-tab-left-banner"
                     onClick={() => {
                       if (activeTab.leftBannerLink) {
-                        navigate(activeTab.leftBannerLink);
+                        handleHomeLinkClick(activeTab.leftBannerLink);
                       }
                     }}
                   >
@@ -1885,20 +1933,19 @@ export default function HomePage() {
               </div>
             </section>
           );
-        },
-      )}
+        }
 
-      {/* KHỐI SẢN PHẨM TRANG CHỦ DO ADMIN QUẢN LÝ */}
+        if (item.type === "PRODUCT_SECTION") {
+          const section = item.section;
 
-      {normalHomeSections.length > 0 && (
-        <div className="home-dynamic-wrapper">
-          {normalHomeSections.map((section) => {
-            const sectionProducts = getProductsForSection(section);
+          const sectionProducts = getProductsForSection(section);
 
-            return (
-              <div className="home-product-block" key={section.id}>
-                {/* KHUNG CHỨA TIÊU ĐỀ + BANNER + SẢN PHẨM */}
-
+          return (
+            <div
+              className="home-dynamic-wrapper home-dynamic-single-wrapper"
+              key={item.key}
+            >
+              <div className="home-product-block">
                 <section
                   id={getHomeSectionId(section)}
                   className="home-product-section"
@@ -1912,7 +1959,7 @@ export default function HomePage() {
                       className="home-section-banner home-section-banner-animated"
                       onClick={() => {
                         if (section.bannerLink) {
-                          window.location.href = section.bannerLink;
+                          handleHomeLinkClick(section.bannerLink);
                         }
                       }}
                     >
@@ -1934,7 +1981,7 @@ export default function HomePage() {
                         className="home-section-left-banner"
                         onClick={() => {
                           if (section.leftBannerLink) {
-                            navigate(section.leftBannerLink);
+                            handleHomeLinkClick(section.leftBannerLink);
                           }
                         }}
                       >
@@ -2004,10 +2051,12 @@ export default function HomePage() {
                   </div>
                 </section>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        }
+
+        return null;
+      })}
 
       {/* KHỐI MÃ GIẢM GIÁ HOMEPAGE */}
 
