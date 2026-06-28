@@ -46,12 +46,7 @@ export const updateOrderStatus = async (id, status) => {
 /*
  * Khách hàng hủy đơn của mình.
  */
-export const cancelOrder = async (id, userId) => {
-  const response = await axios.put(`${API_URL}/${id}/cancel`, null, {
-    params: {
-      userId,
-    },
-  });
-
+export const cancelOrder = async (id) => {
+  const response = await axios.put(`${API_URL}/${id}/cancel`);
   return response.data;
 };
