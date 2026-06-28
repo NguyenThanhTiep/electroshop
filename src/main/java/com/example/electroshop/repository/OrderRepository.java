@@ -139,6 +139,7 @@ public interface OrderRepository
             OrderStatus orderStatus
     );
 
+    boolean existsByCouponCodeIgnoreCase(String couponCode);
     boolean existsByOrderCode(
             String orderCode
     );

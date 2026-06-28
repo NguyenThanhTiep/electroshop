@@ -1,57 +1,100 @@
 const API_URL = "http://localhost:8080/api/coupons";
 
-export const getCoupons = async () => {
-  const response = await fetch(API_URL);
+const getJsonHeaders = () => {
+  const headers = {
+    "Content-Type": "application/json",
+  };
 
-  return response.json();
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+const handleResponse = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+
+  let data = null;
+
+  if (contentType.includes("application/json")) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    data = text || null;
+  }
+
+  if (!response.ok) {
+    const message =
+      data?.message ||
+      data?.error ||
+      data ||
+      `Request failed with status ${response.status}`;
+
+    const error = new Error(message);
+
+    error.response = {
+      status: response.status,
+      data,
+    };
+
+    throw error;
+  }
+
+  return data;
+};
+
+export const getCoupons = async () => {
+  const response = await fetch(API_URL, {
+    headers: getJsonHeaders(),
+  });
+
+  return handleResponse(response);
 };
 
 export const createCoupon = async (coupon) => {
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getJsonHeaders(),
     body: JSON.stringify(coupon),
   });
 
-  return response.json();
+  return handleResponse(response);
 };
 
 export const updateCoupon = async (id, coupon) => {
   const response = await fetch(`${API_URL}/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getJsonHeaders(),
     body: JSON.stringify(coupon),
   });
 
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteCoupon = async (id) => {
-  await fetch(`${API_URL}/${id}`, {
+  const response = await fetch(`${API_URL}/${id}`, {
     method: "DELETE",
+    headers: getJsonHeaders(),
   });
+
+  return handleResponse(response);
 };
 
 export const applyCoupon = async (payload) => {
   const response = await fetch(`${API_URL}/apply`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getJsonHeaders(),
     body: JSON.stringify(payload),
   });
 
-  return response.json();
+  return handleResponse(response);
 };
 
 export const getActiveCoupons = async () => {
-  const response = await fetch(API_URL);
-
-  const data = await response.json();
+  const data = await getCoupons();
 
   if (!Array.isArray(data)) {
     return [];
@@ -65,7 +108,6 @@ export const getActiveCoupons = async () => {
     }
 
     const startDate = coupon.startDate ? new Date(coupon.startDate) : null;
-
     const endDate = coupon.endDate ? new Date(coupon.endDate) : null;
 
     if (startDate && today < startDate) {

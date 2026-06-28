@@ -1299,6 +1299,86 @@ export default function AdminDashboard() {
     }
   };
 
+  const getApiErrorMessage = (error, fallbackMessage) => {
+    const data = error?.response?.data;
+
+    if (typeof data === "string") {
+      return data;
+    }
+
+    return data?.message || data?.error || error?.message || fallbackMessage;
+  };
+
+  const validateCouponForm = () => {
+    const code = couponForm.code.trim();
+    const name = couponForm.name.trim();
+    const discountValue = Number(couponForm.discountValue);
+    const minOrderValue = Number(couponForm.minOrderValue || 0);
+    const maxDiscount = Number(couponForm.maxDiscount || 0);
+    const usageLimit = Number(couponForm.usageLimit || 0);
+
+    if (!code) {
+      alert("Vui lòng nhập mã giảm giá");
+      return false;
+    }
+
+    if (code.length < 3 || code.length > 30) {
+      alert("Mã giảm giá phải từ 3 đến 30 ký tự");
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_-]+$/.test(code)) {
+      alert("Mã giảm giá chỉ được gồm chữ, số, dấu gạch ngang hoặc gạch dưới");
+      return false;
+    }
+
+    if (!name) {
+      alert("Vui lòng nhập tên mã giảm giá");
+      return false;
+    }
+
+    if (!couponForm.discountType) {
+      alert("Vui lòng chọn loại giảm giá");
+      return false;
+    }
+
+    if (!discountValue || discountValue <= 0) {
+      alert("Giá trị giảm phải lớn hơn 0");
+      return false;
+    }
+
+    if (couponForm.discountType === "PERCENT" && discountValue > 100) {
+      alert("Giá trị giảm theo phần trăm không được vượt quá 100");
+      return false;
+    }
+
+    if (minOrderValue < 0) {
+      alert("Giá trị đơn hàng tối thiểu không được nhỏ hơn 0");
+      return false;
+    }
+
+    if (maxDiscount < 0) {
+      alert("Mức giảm tối đa không được nhỏ hơn 0");
+      return false;
+    }
+
+    if (usageLimit < 0) {
+      alert("Giới hạn lượt dùng không được nhỏ hơn 0");
+      return false;
+    }
+
+    if (
+      couponForm.startDate &&
+      couponForm.endDate &&
+      couponForm.startDate > couponForm.endDate
+    ) {
+      alert("Ngày bắt đầu không được sau ngày kết thúc");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleCouponChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -1328,59 +1408,45 @@ export default function AdminDashboard() {
   const handleSaveCoupon = async (e) => {
     e.preventDefault();
 
-    if (!couponForm.code.trim()) {
-      alert("Vui lòng nhập mã coupon");
+    if (!validateCouponForm()) {
       return;
     }
-
-    if (!couponForm.name.trim()) {
-      alert("Vui lòng nhập tên mã giảm giá");
-      return;
-    }
-
-    if (!couponForm.discountValue) {
-      alert("Vui lòng nhập giá trị giảm");
-      return;
-    }
-
-    const oldCoupon = coupons.find(
-      (item) => Number(item.id) === Number(editingCouponId),
-    );
 
     const payload = {
-      ...couponForm,
-
       code: couponForm.code.trim().toUpperCase(),
-
-      discountValue: Number(couponForm.discountValue) || 0,
-
-      minOrderValue: Number(couponForm.minOrderValue) || 0,
-
-      maxDiscount: Number(couponForm.maxDiscount) || 0,
-
-      usageLimit: Number(couponForm.usageLimit) || 0,
-
-      usedCount: oldCoupon?.usedCount || 0,
+      name: couponForm.name.trim(),
+      discountType: couponForm.discountType,
+      discountValue: Number(couponForm.discountValue),
+      minOrderValue: Number(couponForm.minOrderValue || 0),
+      maxDiscount: Number(couponForm.maxDiscount || 0),
+      startDate: couponForm.startDate || null,
+      endDate: couponForm.endDate || null,
+      usageLimit: Number(couponForm.usageLimit || 0),
+      active: couponForm.active,
     };
 
     try {
       if (editingCouponId) {
         await updateCoupon(editingCouponId, payload);
-
         alert("Cập nhật mã giảm giá thành công");
       } else {
         await createCoupon(payload);
-
         alert("Thêm mã giảm giá thành công");
       }
 
       await fetchCoupons();
-
       resetCouponForm();
     } catch (error) {
-      console.log(error);
+      console.error(error);
 
-      alert("Lưu mã giảm giá thất bại");
+      alert(
+        getApiErrorMessage(
+          error,
+          editingCouponId
+            ? "Cập nhật mã giảm giá thất bại"
+            : "Thêm mã giảm giá thất bại",
+        ),
+      );
     }
   };
 
@@ -1418,20 +1484,28 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteCoupon = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa mã giảm giá này?")) {
+    const coupon = coupons.find((item) => Number(item.id) === Number(id));
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa mã giảm giá này không?\n\n` +
+        `${coupon?.code ? `Mã: ${coupon.code}\n` : ""}` +
+        `${coupon?.name ? `Tên: ${coupon.name}\n` : ""}` +
+        `\nLưu ý: Nếu mã giảm giá đã được dùng trong đơn hàng, hệ thống sẽ không cho xóa. Bạn nên tắt trạng thái hoạt động thay vì xóa.`,
+    );
+
+    if (!confirmed) {
       return;
     }
 
     try {
       await deleteCoupon(id);
-
       await fetchCoupons();
 
       alert("Xóa mã giảm giá thành công");
     } catch (error) {
-      console.log(error);
+      console.error(error);
 
-      alert("Xóa mã giảm giá thất bại");
+      alert(getApiErrorMessage(error, "Xóa mã giảm giá thất bại"));
     }
   };
 

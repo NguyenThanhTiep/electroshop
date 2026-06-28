@@ -11,22 +11,24 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface CouponRepository
-        extends JpaRepository<Coupon, Long> {
+public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
-    Optional<Coupon> findByCodeIgnoreCase(
-            String code
+    Optional<Coupon> findByCodeIgnoreCase(String code);
+
+    boolean existsByCodeIgnoreCase(String code);
+
+    boolean existsByCodeIgnoreCaseAndIdNot(
+            String code,
+            Long id
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT c
-        FROM Coupon c
-        WHERE LOWER(c.code) =
-              LOWER(:code)
-    """)
+            SELECT c
+            FROM Coupon c
+            WHERE LOWER(c.code) = LOWER(:code)
+            """)
     Optional<Coupon> findByCodeIgnoreCaseForUpdate(
-            @Param("code")
-            String code
+            @Param("code") String code
     );
 }
