@@ -31,6 +31,8 @@ public interface FlashSaleItemRepository
             Long productId
     );
 
+    boolean existsByProductId(Long productId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT f

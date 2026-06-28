@@ -1,34 +1,32 @@
 package com.example.electroshop.controller;
 
-import java.util.List;
-
-import org.springframework.web.bind.annotation.*;
-
 import com.example.electroshop.entity.Brand;
-import com.example.electroshop.repository.BrandRepository;
+import com.example.electroshop.service.BrandService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/brands")
-@CrossOrigin("*")
+@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class BrandController {
 
-    private final BrandRepository brandRepository;
+    private final BrandService brandService;
 
     @GetMapping
     public List<Brand> getAllBrands() {
-
-        return brandRepository.findAll();
+        return brandService.getAllBrands();
     }
 
     @PostMapping
     public Brand createBrand(
             @RequestBody Brand brand
     ) {
-
-        return brandRepository.save(brand);
+        return brandService.createBrand(brand);
     }
 
     @PutMapping("/{id}")
@@ -36,23 +34,13 @@ public class BrandController {
             @PathVariable Long id,
             @RequestBody Brand brand
     ) {
-
-        Brand existingBrand =
-                brandRepository.findById(id)
-                        .orElseThrow();
-
-        existingBrand.setName(
-                brand.getName()
-        );
-
-        return brandRepository.save(existingBrand);
+        return brandService.updateBrand(id, brand);
     }
 
     @DeleteMapping("/{id}")
     public void deleteBrand(
             @PathVariable Long id
     ) {
-
-        brandRepository.deleteById(id);
+        brandService.deleteBrand(id);
     }
 }

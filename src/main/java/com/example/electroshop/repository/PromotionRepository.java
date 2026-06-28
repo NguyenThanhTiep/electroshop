@@ -14,6 +14,7 @@ public interface PromotionRepository
 
     List<Promotion> findByActiveTrue();
 
+    boolean existsByProductId(Long productId);
     @Query("""
         SELECT p
         FROM Promotion p

@@ -16,11 +16,25 @@ public interface ProductRepository
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT p
-        FROM Product p
-        WHERE p.id = :productId
-    """)
+            SELECT p
+            FROM Product p
+            WHERE p.id = :productId
+            """)
     Optional<Product> findByIdForUpdate(
             @Param("productId") Long productId
+    );
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndIdNot(
+            String name,
+            Long id
+    );
+
+    boolean existsByCategoryIgnoreCase(String category);
+
+    boolean existsByBrandIgnoreCaseAndCategoryIgnoreCase(
+            String brand,
+            String category
     );
 }
