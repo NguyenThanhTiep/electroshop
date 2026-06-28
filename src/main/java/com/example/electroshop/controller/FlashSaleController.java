@@ -8,9 +8,12 @@ import com.example.electroshop.entity.Product;
 import com.example.electroshop.repository.FlashSaleItemRepository;
 import com.example.electroshop.repository.FlashSaleRepository;
 import com.example.electroshop.repository.ProductRepository;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,14 +48,12 @@ public class FlashSaleController {
     // Lấy tất cả chiến dịch cho admin
     @GetMapping
     public List<FlashSale> getAllFlashSales() {
-
         return flashSaleRepository.findAll();
     }
 
     // Lấy chiến dịch đang chạy cho HomePage
     @GetMapping("/active")
     public FlashSaleResponseDto getActiveFlashSale() {
-
         LocalDateTime now =
                 LocalDateTime.now();
 
@@ -71,8 +72,26 @@ public class FlashSaleController {
         return buildFlashSaleResponse(flashSale);
     }
 
+// Lấy tất cả chiến dịch đang chạy cho HomePage
+@GetMapping("/active-list")
+public List<FlashSaleResponseDto> getActiveFlashSales() {
+    LocalDateTime now =
+            LocalDateTime.now();
+
+    return flashSaleRepository
+            .findActiveFlashSalesForHomePage(now)
+            .stream()
+            .map(this::buildFlashSaleResponse)
+            .filter(flashSale ->
+                    flashSale.getItems() != null
+                            &&
+                    !flashSale.getItems().isEmpty()
+            )
+            .collect(Collectors.toList());
+}
+
     // Lấy giá Flash Sale đang áp dụng cho 1 sản phẩm
-@GetMapping("/active/product/{productId}")
+    @GetMapping("/active/product/{productId}")
 public ResponseEntity<FlashSaleProductDto>
 getActiveFlashSaleProduct(
         @PathVariable Long productId
@@ -80,71 +99,57 @@ getActiveFlashSaleProduct(
     LocalDateTime now =
             LocalDateTime.now();
 
-    FlashSale flashSale =
+    List<FlashSale> flashSales =
             flashSaleRepository
-                    .findFirstByActiveTrueAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualOrderBySortOrderAsc(
+                    .findByActiveTrueAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualOrderBySortOrderAscIdAsc(
                             now,
                             now
-                    )
-                    .orElse(null);
+                    );
 
-    if (flashSale == null) {
-        return ResponseEntity
-                .noContent()
-                .build();
+    for (FlashSale flashSale : flashSales) {
+        FlashSaleItem item =
+                flashSaleItemRepository
+                        .findFirstByFlashSaleIdAndProductIdAndActiveTrueOrderByIdDesc(
+                                flashSale.getId(),
+                                productId
+                        )
+                        .orElse(null);
+
+        if (item == null) {
+            continue;
+        }
+
+        int saleQuantity =
+                item.getSaleQuantity() == null
+                        ? 0
+                        : item.getSaleQuantity();
+
+        int soldQuantity =
+                item.getSoldQuantity() == null
+                        ? 0
+                        : item.getSoldQuantity();
+
+        if (
+                item.getSalePrice() == null ||
+                item.getSalePrice().signum() <= 0 ||
+                saleQuantity <= soldQuantity
+        ) {
+            continue;
+        }
+
+        FlashSaleProductDto result =
+                buildProductItemDto(item);
+
+        if (result != null) {
+            return ResponseEntity.ok(result);
+        }
     }
 
-    FlashSaleItem item =
-            flashSaleItemRepository
-                    .findFirstByFlashSaleIdAndProductIdAndActiveTrueOrderByIdDesc(
-                            flashSale.getId(),
-                            productId
-                    )
-                    .orElse(null);
-
-    if (item == null) {
-        return ResponseEntity
-                .noContent()
-                .build();
-    }
-
-    int saleQuantity =
-            item.getSaleQuantity() == null
-                    ? 0
-                    : item.getSaleQuantity();
-
-    int soldQuantity =
-            item.getSoldQuantity() == null
-                    ? 0
-                    : item.getSoldQuantity();
-
-    /*
-     * Không áp dụng Flash Sale nếu:
-     * - chưa có giá sale;
-     * - giá sale không hợp lệ;
-     * - đã bán hết số lượng Flash Sale.
-     */
-    if (
-            item.getSalePrice() == null ||
-            item.getSalePrice().signum() <= 0 ||
-            saleQuantity <= soldQuantity
-    ) {
-        return ResponseEntity
-                .noContent()
-                .build();
-    }
-
-    FlashSaleProductDto result =
-            buildProductItemDto(item);
-
-    if (result == null) {
-        return ResponseEntity
-                .notFound()
-                .build();
-    }
-
-    return ResponseEntity.ok(result);
+    return ResponseEntity
+            .noContent()
+            .build();
 }
+
     // Lấy chi tiết 1 chiến dịch kèm item
     @GetMapping("/{id}")
     public FlashSaleResponseDto getFlashSaleById(
@@ -259,6 +264,8 @@ getActiveFlashSaleProduct(
             item.setLimitPerUser(1);
         }
 
+        validateFlashSaleItemInput(item);
+
         return flashSaleItemRepository.save(item);
     }
 
@@ -271,6 +278,8 @@ getActiveFlashSaleProduct(
         FlashSaleItem oldItem =
                 flashSaleItemRepository.findById(itemId)
                         .orElseThrow();
+
+        validateFlashSaleItemInput(item);
 
         oldItem.setProductId(
                 item.getProductId()
@@ -309,6 +318,30 @@ getActiveFlashSaleProduct(
             @PathVariable Long itemId
     ) {
         flashSaleItemRepository.deleteById(itemId);
+    }
+
+    private void validateFlashSaleItemInput(
+            FlashSaleItem item
+    ) {
+        if (item == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Dữ liệu sản phẩm Flash Sale không hợp lệ"
+            );
+        }
+
+        if (
+                item.getDiscountPercent() == null
+                        ||
+                        item.getDiscountPercent() <= 0
+                        ||
+                        item.getDiscountPercent() > 100
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Phần trăm giảm giá phải từ 1 đến 100"
+            );
+        }
     }
 
     // Hàm build dữ liệu trả ra HomePage
@@ -376,22 +409,22 @@ getActiveFlashSaleProduct(
                     );
         }
 
-return FlashSaleProductDto
-        .builder()
-        .itemId(item.getId())
-        .productId(product.getId())
-        .productName(product.getName())
-        .image(product.getImage())
-        .brand(product.getBrand())
-        .category(product.getCategory())
-        .description(product.getDescription())
-        .originalPrice(product.getPrice())
-        .salePrice(item.getSalePrice())
-        .discountPercent(item.getDiscountPercent())
-        .saleQuantity(saleQuantity)
-        .soldQuantity(soldQuantity)
-        .soldPercent(soldPercent)
-        .limitPerUser(item.getLimitPerUser())
-        .build();
+        return FlashSaleProductDto
+                .builder()
+                .itemId(item.getId())
+                .productId(product.getId())
+                .productName(product.getName())
+                .image(product.getImage())
+                .brand(product.getBrand())
+                .category(product.getCategory())
+                .description(product.getDescription())
+                .originalPrice(product.getPrice())
+                .salePrice(item.getSalePrice())
+                .discountPercent(item.getDiscountPercent())
+                .saleQuantity(saleQuantity)
+                .soldQuantity(soldQuantity)
+                .soldPercent(soldPercent)
+                .limitPerUser(item.getLimitPerUser())
+                .build();
     }
 }

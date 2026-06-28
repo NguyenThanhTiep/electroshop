@@ -73,6 +73,22 @@ export const getActiveFlashSale = async () => {
   return parseResponseBody(response);
 };
 
+export const getActiveFlashSales = async () => {
+  const response = await fetch(`${API_URL}/active-list`);
+
+  if (response.status === 204) {
+    return [];
+  }
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await parseResponseBody(response);
+
+  return Array.isArray(data) ? data : [];
+};
+
 export const getActiveFlashSaleProduct = async (productId) => {
   if (!productId) {
     return null;

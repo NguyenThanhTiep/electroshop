@@ -25,7 +25,7 @@ import { getActiveHomeSections } from "../services/homeSectionApi";
 
 import { getActiveSectionBanners } from "../services/homeSectionBannerApi";
 
-import { getActiveFlashSale } from "../services/flashSaleApi";
+import { getActiveFlashSales } from "../services/flashSaleApi";
 
 import { getActivePromotions } from "../services/promotionApi";
 
@@ -284,7 +284,7 @@ export default function HomePage() {
 
   const [products, setProducts] = useState([]);
 
-  const [activeFlashSale, setActiveFlashSale] = useState(null);
+  const [activeFlashSales, setActiveFlashSales] = useState([]);
 
   const [activePromotions, setActivePromotions] = useState([]);
 
@@ -519,13 +519,30 @@ export default function HomePage() {
 
   const fetchActiveFlashSale = async () => {
     try {
-      const data = await getActiveFlashSale();
+      const data = await getActiveFlashSales();
 
-      setActiveFlashSale(data || null);
+      const flashSales = Array.isArray(data)
+        ? data
+            .filter(
+              (flashSale) =>
+                Array.isArray(flashSale.items) && flashSale.items.length > 0,
+            )
+            .sort((a, b) => {
+              const sortA = Number(a.sortOrder || 0);
+              const sortB = Number(b.sortOrder || 0);
+
+              if (sortA !== sortB) {
+                return sortA - sortB;
+              }
+
+              return Number(a.id || 0) - Number(b.id || 0);
+            })
+        : [];
+
+      setActiveFlashSales(flashSales);
     } catch (error) {
       console.log(error);
-
-      setActiveFlashSale(null);
+      setActiveFlashSales([]);
     }
   };
 
@@ -634,34 +651,34 @@ export default function HomePage() {
   };
 
   const getFlashSaleItemForProduct = (productId) => {
-    const item = activeFlashSale?.items?.find(
-      (flashItem) => Number(flashItem.productId) === Number(productId),
-    );
+    for (const flashSale of activeFlashSales) {
+      const item = flashSale?.items?.find(
+        (flashItem) => Number(flashItem.productId) === Number(productId),
+      );
 
-    if (!item) {
-      return null;
+      if (!item) {
+        continue;
+      }
+
+      const salePrice = Number(item.salePrice || 0);
+      const originalPrice = Number(item.originalPrice || 0);
+      const saleQuantity = Number(item.saleQuantity || 0);
+      const soldQuantity = Number(item.soldQuantity || 0);
+      const remainingQuantity = Math.max(0, saleQuantity - soldQuantity);
+
+      if (
+        salePrice <= 0 ||
+        originalPrice <= 0 ||
+        salePrice >= originalPrice ||
+        remainingQuantity <= 0
+      ) {
+        continue;
+      }
+
+      return item;
     }
 
-    const salePrice = Number(item.salePrice || 0);
-
-    const originalPrice = Number(item.originalPrice || 0);
-
-    const saleQuantity = Number(item.saleQuantity || 0);
-
-    const soldQuantity = Number(item.soldQuantity || 0);
-
-    const remainingQuantity = Math.max(0, saleQuantity - soldQuantity);
-
-    if (
-      salePrice <= 0 ||
-      originalPrice <= 0 ||
-      salePrice >= originalPrice ||
-      remainingQuantity <= 0
-    ) {
-      return null;
-    }
-
-    return item;
+    return null;
   };
 
   const getEffectiveHomePrice = (product) => {
@@ -927,8 +944,28 @@ export default function HomePage() {
   }, {});
 
   const getSectionSortOrder = (section) => {
-    return Number(section?.sortOrder || 0);
+    const sortOrder = Number(section?.sortOrder);
+
+    return Number.isFinite(sortOrder) && sortOrder > 0 ? sortOrder : 999999;
   };
+
+  const getFlashSaleSortOrder = (flashSale) => {
+    const sortOrder = Number(flashSale?.sortOrder);
+
+    return Number.isFinite(sortOrder) && sortOrder > 0 ? sortOrder : 999999;
+  };
+
+  const flashSaleRenderItems = activeFlashSales
+    .filter(
+      (flashSale) =>
+        Array.isArray(flashSale.items) && flashSale.items.length > 0,
+    )
+    .map((flashSale) => ({
+      type: "FLASH_SALE",
+      key: `flash-sale-${flashSale.id}`,
+      sortOrder: getFlashSaleSortOrder(flashSale),
+      flashSale,
+    }));
 
   const homepageRenderItems = [
     ...bannerHomeSections.map((section) => ({
@@ -937,6 +974,8 @@ export default function HomePage() {
       sortOrder: getSectionSortOrder(section),
       section,
     })),
+
+    ...flashSaleRenderItems,
 
     ...Object.entries(groupedTabbedSections).map(([groupCode, sections]) => {
       const minSortOrder = Math.min(
@@ -959,11 +998,16 @@ export default function HomePage() {
       section,
     })),
   ].sort((a, b) => {
-    if (a.sortOrder !== b.sortOrder) {
-      return a.sortOrder - b.sortOrder;
+    const sortA = Number(a.sortOrder || 999999);
+    const sortB = Number(b.sortOrder || 999999);
+
+    if (sortA !== sortB) {
+      return sortA - sortB;
     }
 
-    return String(a.key).localeCompare(String(b.key));
+    return String(a.key).localeCompare(String(b.key), "vi", {
+      numeric: true,
+    });
   });
 
   const firstTabbedGroupKey = homepageRenderItems.find(
@@ -1544,16 +1588,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* KHỐI GIỜ VÀNG FLASH SALE TỪ API MỚI */}
+      {/* CÁC KHỐI HOMEPAGE RENDER THEO THỨ TỰ ADMIN THIẾT LẬP */}
 
-      {activeFlashSale &&
-        activeFlashSale.items &&
-        activeFlashSale.items.length > 0 && (
-          <section
-            id="flash-sale"
-            className="golden-hour-pro-section flash-bg-full"
-            style={{
-              backgroundImage: `
+      {homepageRenderItems.map((item) => {
+        {
+          /* KHỐI GIỜ VÀNG FLASH SALE TỪ API MỚI */
+        }
+
+        {
+          activeFlashSales.map((activeFlashSale) => (
+            <section
+              id="flash-sale"
+              className="golden-hour-pro-section flash-bg-full"
+              style={{
+                backgroundImage: `
       linear-gradient(
         180deg,
         rgba(130, 0, 0, 0.08) 0%,
@@ -1563,227 +1611,233 @@ export default function HomePage() {
       ),
       url(${activeFlashSale.bannerImage || "/images/golden-hour-bg.png"})
     `,
-            }}
-          >
-            <div className="golden-hour-header banner-has-title">
-              <div className="golden-hour-header-overlay"></div>
+              }}
+            >
+              <div className="golden-hour-header banner-has-title">
+                <div className="golden-hour-header-overlay"></div>
 
-              <div className="golden-hour-title-box">
-                <div className="golden-hour-icon">⚡</div>
+                <div className="golden-hour-title-box">
+                  <div className="golden-hour-icon">⚡</div>
 
-                <div>
-                  <h2>GIỜ VÀNG</h2>
+                  <div>
+                    <h2>GIỜ VÀNG</h2>
 
-                  <h3>DEAL SỐC</h3>
+                    <h3>DEAL SỐC</h3>
+                  </div>
+                </div>
+
+                <div className="golden-hour-countdown">
+                  <p>KẾT THÚC TRONG</p>
+
+                  {(() => {
+                    const dealTime = getDealTimeLeft(activeFlashSale.endTime);
+
+                    return (
+                      <div className="golden-hour-time-row">
+                        <div className="golden-hour-time-item">
+                          <strong>{dealTime.hours}</strong>
+
+                          <span>Giờ</span>
+                        </div>
+
+                        <b>:</b>
+
+                        <div className="golden-hour-time-item">
+                          <strong>{dealTime.minutes}</strong>
+
+                          <span>Phút</span>
+                        </div>
+
+                        <b>:</b>
+
+                        <div className="golden-hour-time-item">
+                          <strong>{dealTime.seconds}</strong>
+
+                          <span>Giây</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <small>
+                    {activeFlashSale.subtitle ||
+                      "Săn ưu đãi giới hạn trong khung giờ vàng"}
+                  </small>
+                </div>
+
+                <div className="golden-hour-limit-badge">
+                  <span>ƯU ĐÃI</span>
+
+                  <strong>GIỚI HẠN</strong>
+
+                  <em>DUY NHẤT HÔM NAY</em>
                 </div>
               </div>
 
-              <div className="golden-hour-countdown">
-                <p>KẾT THÚC TRONG</p>
+              <div className="golden-hour-product-wrap">
+                <button
+                  type="button"
+                  className="golden-hour-arrow left"
+                  onClick={() => {
+                    document
+                      .querySelector(`.golden-hour-grid-${activeFlashSale.id}`)
+                      ?.scrollBy({
+                        left: -1000,
+                        behavior: "smooth",
+                      });
+                  }}
+                >
+                  ❮
+                </button>
 
-                {(() => {
-                  const dealTime = getDealTimeLeft(activeFlashSale.endTime);
+                <div
+                  className={`golden-hour-grid golden-hour-grid-${activeFlashSale.id}`}
+                >
+                  {activeFlashSale.items.map((item) => {
+                    const soldPercent = Number(item.soldPercent || 0);
 
-                  return (
-                    <div className="golden-hour-time-row">
-                      <div className="golden-hour-time-item">
-                        <strong>{dealTime.hours}</strong>
-
-                        <span>Giờ</span>
-                      </div>
-
-                      <b>:</b>
-
-                      <div className="golden-hour-time-item">
-                        <strong>{dealTime.minutes}</strong>
-
-                        <span>Phút</span>
-                      </div>
-
-                      <b>:</b>
-
-                      <div className="golden-hour-time-item">
-                        <strong>{dealTime.seconds}</strong>
-
-                        <span>Giây</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                <small>
-                  {activeFlashSale.subtitle ||
-                    "Săn ưu đãi giới hạn trong khung giờ vàng"}
-                </small>
-              </div>
-
-              <div className="golden-hour-limit-badge">
-                <span>ƯU ĐÃI</span>
-
-                <strong>GIỚI HẠN</strong>
-
-                <em>DUY NHẤT HÔM NAY</em>
-              </div>
-            </div>
-
-            <div className="golden-hour-product-wrap">
-              <button
-                type="button"
-                className="golden-hour-arrow left"
-                onClick={() => {
-                  document.querySelector(".golden-hour-grid")?.scrollBy({
-                    left: -1000,
-                    behavior: "smooth",
-                  });
-                }}
-              >
-                ❮
-              </button>
-
-              <div className="golden-hour-grid">
-                {activeFlashSale.items.map((item) => {
-                  const soldPercent = Number(item.soldPercent || 0);
-
-                  return (
-                    <div
-                      className="golden-hour-card"
-                      key={item.itemId}
-                      onClick={() => navigate(`/product/${item.productId}`)}
-                    >
-                      <div className="golden-hour-sale-badge">
-                        -{item.discountPercent || 0}%
-                      </div>
-
-                      <div className="golden-hour-installment">Trả góp 0%</div>
-
-                      <div className="golden-hour-image-box">
-                        <img src={item.image} alt={item.productName} />
-                      </div>
-
-                      <div className="golden-hour-card-info">
-                        <h4>{item.productName}</h4>
-
-                        <p className="golden-hour-price">
-                          {formatCurrency(item.salePrice)}
-                        </p>
-
-                        <p className="golden-hour-old-price">
-                          {formatCurrency(item.originalPrice)}
-                        </p>
-
-                        <div className="golden-hour-gift">
-                          🎁 Tặng kèm: Ưu đãi thành viên
+                    return (
+                      <div
+                        className="golden-hour-card"
+                        key={item.itemId}
+                        onClick={() => navigate(`/product/${item.productId}`)}
+                      >
+                        <div className="golden-hour-sale-badge">
+                          -{item.discountPercent || 0}%
                         </div>
 
-                        <div className="golden-hour-sold-box">
-                          <span>Đã bán {soldPercent}%</span>
+                        <div className="golden-hour-installment">
+                          Trả góp 0%
+                        </div>
 
-                          <div className="golden-hour-progress">
-                            <i
-                              style={{
-                                width: `${soldPercent}%`,
-                              }}
-                            ></i>
+                        <div className="golden-hour-image-box">
+                          <img src={item.image} alt={item.productName} />
+                        </div>
+
+                        <div className="golden-hour-card-info">
+                          <h4>{item.productName}</h4>
+
+                          <p className="golden-hour-price">
+                            {formatCurrency(item.salePrice)}
+                          </p>
+
+                          <p className="golden-hour-old-price">
+                            {formatCurrency(item.originalPrice)}
+                          </p>
+
+                          <div className="golden-hour-gift">
+                            🎁 Tặng kèm: Ưu đãi thành viên
                           </div>
+
+                          <div className="golden-hour-sold-box">
+                            <span>Đã bán {soldPercent}%</span>
+
+                            <div className="golden-hour-progress">
+                              <i
+                                style={{
+                                  width: `${soldPercent}%`,
+                                }}
+                              ></i>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            className="golden-hour-buy-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+
+                              const flashSaleProduct = {
+                                id: item.productId,
+                                name: item.productName,
+                                image: item.image,
+                                price: item.salePrice,
+                                originalPrice: item.originalPrice,
+                                flashSalePrice: item.salePrice,
+                                flashSaleItemId: item.itemId,
+                                isFlashSale: true,
+                                quantity: 1,
+                              };
+
+                              handleBuyNow(flashSaleProduct);
+                            }}
+                          >
+                            MUA NGAY 🛒
+                          </button>
                         </div>
-
-                        <button
-                          type="button"
-                          className="golden-hour-buy-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-
-                            const flashSaleProduct = {
-                              id: item.productId,
-                              name: item.productName,
-                              image: item.image,
-                              price: item.salePrice,
-                              originalPrice: item.originalPrice,
-                              flashSalePrice: item.salePrice,
-                              flashSaleItemId: item.itemId,
-                              isFlashSale: true,
-                              quantity: 1,
-                            };
-
-                            handleBuyNow(flashSaleProduct);
-                          }}
-                        >
-                          MUA NGAY 🛒
-                        </button>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  className="golden-hour-arrow right"
+                  onClick={() => {
+                    document
+                      .querySelector(`.golden-hour-grid-${activeFlashSale.id}`)
+                      ?.scrollBy({
+                        left: 1000,
+                        behavior: "smooth",
+                      });
+                  }}
+                >
+                  ❯
+                </button>
               </div>
 
-              <button
-                type="button"
-                className="golden-hour-arrow right"
-                onClick={() => {
-                  document.querySelector(".golden-hour-grid")?.scrollBy({
-                    left: 1000,
-                    behavior: "smooth",
-                  });
-                }}
-              >
-                ❯
-              </button>
-            </div>
+              <div className="golden-hour-service-row">
+                <div>
+                  <span>🛡️</span>
 
-            <div className="golden-hour-service-row">
-              <div>
-                <span>🛡️</span>
+                  <p>
+                    <strong>Hàng chính hãng 100%</strong>
 
-                <p>
-                  <strong>Hàng chính hãng 100%</strong>
+                    <small>Cam kết chất lượng</small>
+                  </p>
+                </div>
 
-                  <small>Cam kết chất lượng</small>
-                </p>
+                <div>
+                  <span>🔄</span>
+
+                  <p>
+                    <strong>Đổi trả dễ dàng</strong>
+
+                    <small>Trong 7 ngày</small>
+                  </p>
+                </div>
+
+                <div>
+                  <span>🚚</span>
+
+                  <p>
+                    <strong>Giao hàng siêu tốc</strong>
+
+                    <small>Toàn quốc</small>
+                  </p>
+                </div>
+
+                <div>
+                  <span>💳</span>
+
+                  <p>
+                    <strong>Thanh toán đa dạng</strong>
+
+                    <small>An toàn, bảo mật</small>
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <span>🔄</span>
-
-                <p>
-                  <strong>Đổi trả dễ dàng</strong>
-
-                  <small>Trong 7 ngày</small>
-                </p>
+              <div className="golden-hour-dots">
+                <span className="active"></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
               </div>
-
-              <div>
-                <span>🚚</span>
-
-                <p>
-                  <strong>Giao hàng siêu tốc</strong>
-
-                  <small>Toàn quốc</small>
-                </p>
-              </div>
-
-              <div>
-                <span>💳</span>
-
-                <p>
-                  <strong>Thanh toán đa dạng</strong>
-
-                  <small>An toàn, bảo mật</small>
-                </p>
-              </div>
-            </div>
-
-            <div className="golden-hour-dots">
-              <span className="active"></span>
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </section>
-        )}
-      {/* CÁC KHỐI HOMEPAGE RENDER THEO THỨ TỰ ADMIN THIẾT LẬP */}
-
-      {homepageRenderItems.map((item) => {
+            </section>
+          ));
+        }
         if (item.type === "BANNER_SECTION") {
           const section = item.section;
 

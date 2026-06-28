@@ -122,11 +122,12 @@ public class SecurityConfig {
                         .permitAll()
 
                         .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/flash-sales/active",
-                                "/api/flash-sales/active/product/**"
-                        )
-                        .permitAll()
+        HttpMethod.GET,
+        "/api/flash-sales/active",
+        "/api/flash-sales/active-list",
+        "/api/flash-sales/active/product/**"
+)
+.permitAll()
 
                         /*
                          * Tạm giữ public GET coupon để homepage không bị lỗi.
