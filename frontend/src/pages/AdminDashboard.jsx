@@ -1437,15 +1437,22 @@ export default function AdminDashboard() {
 
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm("Bạn có chắc muốn xóa?");
-
     if (!confirmDelete) return;
 
     try {
       await deleteProduct(id);
-
-      fetchProducts();
+      await fetchProducts();
+      alert("Xóa sản phẩm thành công");
     } catch (error) {
-      console.log(error);
+      console.error(error);
+
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.response?.data ||
+        "Xóa sản phẩm thất bại";
+
+      alert(message);
     }
   };
 

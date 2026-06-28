@@ -7,27 +7,32 @@ import App from "./App";
 import "./index.css";
 
 /*
- * Gắn token cho toàn bộ request axios
+ * Gắn token cho toàn bộ request axios.
+ * Các file như productApi.js, categoryApi.js, orderApi.js...
+ * đang dùng axios nên sẽ tự có Authorization header.
  */
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  return config;
-});
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
 
 /*
- * Gắn token cho toàn bộ request fetch
- * Vì project đang dùng lẫn axios và fetch.
+ * Gắn token cho fetch.
+ * Project của bạn có vài service dùng fetch, nên thêm luôn cho chắc.
  */
 const originalFetch = window.fetch.bind(window);
 
 window.fetch = (input, init = {}) => {
   const token = localStorage.getItem("token");
-
   const headers = new Headers(init.headers || {});
 
   if (token && !headers.has("Authorization")) {
