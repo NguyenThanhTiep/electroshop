@@ -106,9 +106,13 @@ export default function CheckoutPage() {
     if (checkoutSource === "BUY_NOW") {
       const buyNowItem = getBuyNowItem();
 
-      setCartItems(buyNowItem ? [buyNowItem] : []);
+      if (buyNowItem) {
+        setCartItems([buyNowItem]);
+        return;
+      }
 
-      return;
+      sessionStorage.removeItem("checkoutSource");
+      sessionStorage.removeItem("buyNowItem");
     }
 
     const cart = getCart();

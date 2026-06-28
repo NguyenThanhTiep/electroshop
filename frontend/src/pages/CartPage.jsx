@@ -181,6 +181,17 @@ export default function CartPage() {
     sessionStorage.removeItem("checkoutCouponCode");
   };
 
+  const handleGoToCheckout = () => {
+    if (cartItems.length === 0) {
+      return;
+    }
+
+    sessionStorage.setItem("checkoutSource", "CART");
+    sessionStorage.removeItem("buyNowItem");
+
+    window.location.href = "/checkout";
+  };
+
   return (
     <>
       <Header />
@@ -443,7 +454,7 @@ export default function CartPage() {
 
                   <button
                     className="checkout-main-btn"
-                    onClick={() => (window.location.href = "/checkout")}
+                    onClick={handleGoToCheckout}
                   >
                     Tiến hành thanh toán
                   </button>
