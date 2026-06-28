@@ -1187,6 +1187,62 @@ export default function AdminDashboard() {
     }
   };
 
+  const getApiErrorMessage = (error, fallbackMessage) => {
+    const data = error?.response?.data;
+
+    if (typeof data === "string") {
+      return data;
+    }
+
+    return data?.message || data?.error || error?.message || fallbackMessage;
+  };
+
+  const validatePromotionForm = () => {
+    const title = promotionForm.title.trim();
+    const productId = Number(promotionForm.productId);
+    const discountPercent = Number(promotionForm.discountPercent);
+
+    if (!title) {
+      alert("Vui lòng nhập tên khuyến mãi");
+      return false;
+    }
+
+    if (!productId) {
+      alert("Vui lòng chọn sản phẩm");
+      return false;
+    }
+
+    const productExists = products.some(
+      (item) => Number(item.id) === productId,
+    );
+
+    if (!productExists) {
+      alert("Sản phẩm áp dụng khuyến mãi không tồn tại trong danh sách");
+      return false;
+    }
+
+    if (!discountPercent) {
+      alert("Vui lòng nhập phần trăm giảm");
+      return false;
+    }
+
+    if (discountPercent <= 0 || discountPercent > 100) {
+      alert("Phần trăm giảm giá phải từ 1 đến 100");
+      return false;
+    }
+
+    if (
+      promotionForm.startDate &&
+      promotionForm.endDate &&
+      promotionForm.startDate > promotionForm.endDate
+    ) {
+      alert("Ngày bắt đầu không được sau ngày kết thúc");
+      return false;
+    }
+
+    return true;
+  };
+
   const handlePromotionChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -1212,47 +1268,41 @@ export default function AdminDashboard() {
   const handleSavePromotion = async (e) => {
     e.preventDefault();
 
-    if (!promotionForm.title.trim()) {
-      alert("Vui lòng nhập tên khuyến mãi");
-      return;
-    }
-
-    if (!promotionForm.productId) {
-      alert("Vui lòng chọn sản phẩm");
-      return;
-    }
-
-    if (!promotionForm.discountPercent) {
-      alert("Vui lòng nhập phần trăm giảm");
+    if (!validatePromotionForm()) {
       return;
     }
 
     const payload = {
-      ...promotionForm,
-
+      title: promotionForm.title.trim(),
       productId: Number(promotionForm.productId),
-
       discountPercent: Number(promotionForm.discountPercent),
+      startDate: promotionForm.startDate || null,
+      endDate: promotionForm.endDate || null,
+      active: promotionForm.active,
     };
 
     try {
       if (editingPromotionId) {
         await updatePromotion(editingPromotionId, payload);
-
         alert("Cập nhật khuyến mãi thành công");
       } else {
         await createPromotion(payload);
-
         alert("Thêm khuyến mãi thành công");
       }
 
       await fetchPromotions();
-
       resetPromotionForm();
     } catch (error) {
       console.log(error);
 
-      alert("Lưu khuyến mãi thất bại");
+      alert(
+        getApiErrorMessage(
+          error,
+          editingPromotionId
+            ? "Cập nhật khuyến mãi thất bại"
+            : "Thêm khuyến mãi thất bại",
+        ),
+      );
     }
   };
 
@@ -1261,15 +1311,14 @@ export default function AdminDashboard() {
 
     setPromotionForm({
       title: promotion.title || "",
-
-      productId: promotion.productId || "",
-
-      discountPercent: promotion.discountPercent || "",
-
+      productId: promotion.productId ? String(promotion.productId) : "",
+      discountPercent:
+        promotion.discountPercent !== null &&
+        promotion.discountPercent !== undefined
+          ? String(promotion.discountPercent)
+          : "",
       startDate: promotion.startDate || "",
-
       endDate: promotion.endDate || "",
-
       active: promotion.active ?? true,
     });
 
@@ -1282,31 +1331,30 @@ export default function AdminDashboard() {
   };
 
   const handleDeletePromotion = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa khuyến mãi này?")) {
+    const promotion = discountPromotions.find(
+      (item) => Number(item.id) === Number(id),
+    );
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa khuyến mãi này không?\n\n` +
+        `${promotion?.title ? `Tên: ${promotion.title}\n` : ""}` +
+        `${promotion?.productId ? `ID sản phẩm: ${promotion.productId}\n` : ""}`,
+    );
+
+    if (!confirmed) {
       return;
     }
 
     try {
       await deletePromotion(id);
-
       await fetchPromotions();
 
       alert("Xóa khuyến mãi thành công");
     } catch (error) {
       console.log(error);
 
-      alert("Xóa khuyến mãi thất bại");
+      alert(getApiErrorMessage(error, "Xóa khuyến mãi thất bại"));
     }
-  };
-
-  const getApiErrorMessage = (error, fallbackMessage) => {
-    const data = error?.response?.data;
-
-    if (typeof data === "string") {
-      return data;
-    }
-
-    return data?.message || data?.error || error?.message || fallbackMessage;
   };
 
   const validateCouponForm = () => {

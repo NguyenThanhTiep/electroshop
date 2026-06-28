@@ -15,27 +15,34 @@ public interface PromotionRepository
     List<Promotion> findByActiveTrue();
 
     boolean existsByProductId(Long productId);
-    @Query("""
-        SELECT p
-        FROM Promotion p
-        WHERE p.productId = :productId
-          AND p.active = true
-          AND (
-              p.startDate IS NULL
-              OR p.startDate <= :today
-          )
-          AND (
-              p.endDate IS NULL
-              OR p.endDate >= :today
-          )
-        ORDER BY p.id DESC
-    """)
-    List<Promotion>
-    findActivePromotionsForProduct(
-            @Param("productId")
-            Long productId,
 
-            @Param("today")
-            LocalDate today
+    @Query("""
+            SELECT COUNT(p)
+            FROM Promotion p
+            WHERE p.productId = :productId
+              AND p.active = true
+              AND p.id <> :excludedId
+              AND (p.startDate IS NULL OR p.startDate <= :endDate)
+              AND (p.endDate IS NULL OR p.endDate >= :startDate)
+            """)
+    long countActiveOverlappingPromotions(
+            @Param("productId") Long productId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("excludedId") Long excludedId
+    );
+
+    @Query("""
+            SELECT p
+            FROM Promotion p
+            WHERE p.productId = :productId
+              AND p.active = true
+              AND (p.startDate IS NULL OR p.startDate <= :today)
+              AND (p.endDate IS NULL OR p.endDate >= :today)
+            ORDER BY p.id DESC
+            """)
+    List<Promotion> findActivePromotionsForProduct(
+            @Param("productId") Long productId,
+            @Param("today") LocalDate today
     );
 }
