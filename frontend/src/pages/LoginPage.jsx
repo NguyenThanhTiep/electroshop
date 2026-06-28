@@ -6,6 +6,8 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { login } from "../services/authApi";
 
+import { mergeGuestCartToCurrentUser } from "../utils/cartUtils";
+
 import Header from "../components/Header";
 
 import Footer from "../components/Footer";
@@ -63,6 +65,10 @@ export default function LoginPage() {
       localStorage.setItem("role", response.role);
 
       localStorage.setItem("currentUser", JSON.stringify(response));
+
+      mergeGuestCartToCurrentUser();
+      window.dispatchEvent(new Event("authChanged"));
+      window.dispatchEvent(new Event("cartUpdated"));
 
       if (response.role === "admin") {
         navigate("/admin");

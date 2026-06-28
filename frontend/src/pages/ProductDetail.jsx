@@ -17,7 +17,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-import { addToCart } from "../utils/cartUtils";
+import { addToCart, saveBuyNowItem } from "../utils/cartUtils";
 
 import { getProductById, getProducts } from "../services/productApi";
 
@@ -487,17 +487,17 @@ export default function ProductDetail() {
 
     const cartProduct = buildCartProduct();
 
-    addToCart(cartProduct);
-
-    sessionStorage.setItem("checkoutSource", "BUY_NOW");
+    /*
+     * Mua ngay không thêm vào giỏ hàng thường.
+     * Chỉ lưu tạm vào sessionStorage để CheckoutPage xử lý riêng.
+     */
+    saveBuyNowItem(cartProduct);
 
     const token = localStorage.getItem("token");
 
     if (!token) {
       sessionStorage.setItem("redirectAfterLogin", "/checkout");
-
       navigate("/login");
-
       return;
     }
 

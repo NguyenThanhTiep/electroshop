@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
-import { clearCart } from "../utils/cartUtils";
+import { clearCart, clearBuyNowItem } from "../utils/cartUtils";
 
 import { getVnpayPaymentStatus } from "../services/paymentApi";
 
@@ -57,14 +57,22 @@ export default function PaymentResultPage() {
         setPayment(data);
 
         if (data.paymentStatus === "PAID") {
-          clearCart();
+          const pendingCheckoutSource =
+            sessionStorage.getItem("pendingCheckoutSource") ||
+            sessionStorage.getItem("checkoutSource") ||
+            "CART";
+
+          if (pendingCheckoutSource === "BUY_NOW") {
+            clearBuyNowItem();
+          } else {
+            clearCart();
+          }
 
           sessionStorage.removeItem("pendingVnpayTxnRef");
-
           sessionStorage.removeItem("pendingOrderCode");
+          sessionStorage.removeItem("pendingCheckoutSource");
 
           setLoading(false);
-
           return;
         }
 

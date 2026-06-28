@@ -83,16 +83,28 @@ export default function Header() {
       setCartCount(totalQuantity);
     };
 
+    const syncCurrentUser = () => {
+      try {
+        const savedUser = localStorage.getItem("currentUser");
+
+        setCurrentUser(savedUser ? JSON.parse(savedUser) : null);
+      } catch {
+        setCurrentUser(null);
+      }
+
+      updateCartCount();
+    };
+
     updateCartCount();
 
     window.addEventListener("cartUpdated", updateCartCount);
-
-    window.addEventListener("storage", updateCartCount);
+    window.addEventListener("authChanged", syncCurrentUser);
+    window.addEventListener("storage", syncCurrentUser);
 
     return () => {
       window.removeEventListener("cartUpdated", updateCartCount);
-
-      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener("authChanged", syncCurrentUser);
+      window.removeEventListener("storage", syncCurrentUser);
     };
   }, []);
 
@@ -195,6 +207,9 @@ export default function Header() {
 
     setCurrentUser(null);
     setIsUserMenuOpen(false);
+
+    window.dispatchEvent(new Event("authChanged"));
+    window.dispatchEvent(new Event("cartUpdated"));
 
     navigate("/login");
   };

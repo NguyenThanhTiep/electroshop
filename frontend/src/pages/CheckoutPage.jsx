@@ -7,7 +7,12 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
-import { getCart, clearCart } from "../utils/cartUtils";
+import {
+  getCart,
+  clearCart,
+  getBuyNowItem,
+  clearBuyNowItem,
+} from "../utils/cartUtils";
 
 import { createCheckout } from "../services/checkoutApi";
 
@@ -96,6 +101,16 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
+    const checkoutSource = sessionStorage.getItem("checkoutSource");
+
+    if (checkoutSource === "BUY_NOW") {
+      const buyNowItem = getBuyNowItem();
+
+      setCartItems(buyNowItem ? [buyNowItem] : []);
+
+      return;
+    }
+
     const cart = getCart();
 
     setCartItems(Array.isArray(cart) ? cart : []);
@@ -297,6 +312,8 @@ export default function CheckoutPage() {
     try {
       setLoading(true);
 
+      const checkoutSource = sessionStorage.getItem("checkoutSource") || "CART";
+
       const checkoutData = {
         userId: Number(userId),
 
@@ -331,6 +348,7 @@ export default function CheckoutPage() {
         savePendingTransaction(result.paymentUrl);
 
         sessionStorage.setItem("pendingOrderCode", result.orderCode || "");
+        sessionStorage.setItem("pendingCheckoutSource", checkoutSource);
 
         /*
          * Không xóa giỏ hàng tại đây.
@@ -345,7 +363,11 @@ export default function CheckoutPage() {
        * COD: backend đã tạo đơn thành công,
        * nên có thể xóa giỏ hàng.
        */
-      clearCart();
+      if (checkoutSource === "BUY_NOW") {
+        clearBuyNowItem();
+      } else {
+        clearCart();
+      }
 
       navigate("/orders", {
         state: {
