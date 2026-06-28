@@ -31,7 +31,7 @@ import { getActivePromotions } from "../services/promotionApi";
 
 import { getActiveCoupons } from "../services/couponApi";
 
-import { addToCart } from "../utils/cartUtils";
+import { saveBuyNowItem } from "../utils/cartUtils";
 
 function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -601,9 +601,23 @@ export default function HomePage() {
   };
 
   const handleBuyNow = (product) => {
-    addToCart(product);
+    const buyNowProduct = {
+      ...product,
+      quantity: Number(product.quantity || 1),
+      isFlashSale: product.isFlashSale === true,
+    };
 
-    navigate("/cart");
+    saveBuyNowItem(buyNowProduct);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      sessionStorage.setItem("redirectAfterLogin", "/checkout");
+      navigate("/login");
+      return;
+    }
+
+    navigate("/checkout");
   };
 
   const formatPrice = (price) => {
