@@ -155,26 +155,38 @@ export default function ProductDetail() {
     activeFlashSaleProduct?.salePrice,
   );
 
+  const flashSaleDiscountPercent = Number(
+    activeFlashSaleProduct?.discountPercent || 0,
+  );
+
   const promotionPercent = Number(activePromotion?.discountPercent || 0);
 
   let finalPrice = regularPrice;
-
   let priceSource = "REGULAR";
 
   /*
    * Ưu tiên Flash Sale.
    *
-   * Flash Sale hiện chỉ áp dụng cho
-   * cấu hình giá gốc của sản phẩm.
+   * Flash Sale áp dụng theo % giảm
+   * cho giá của tùy chọn đang chọn.
    */
   if (
+    activeFlashSaleProduct &&
+    flashSaleDiscountPercent > 0 &&
+    flashSaleDiscountPercent < 100
+  ) {
+    finalPrice = Math.round(
+      (regularPrice * (100 - flashSaleDiscountPercent)) / 100,
+    );
+
+    priceSource = "FLASH_SALE";
+  } else if (
     activeFlashSaleProduct &&
     flashSalePrice > 0 &&
     flashSalePrice < baseProductPrice &&
     regularPrice === baseProductPrice
   ) {
     finalPrice = flashSalePrice;
-
     priceSource = "FLASH_SALE";
   }
 

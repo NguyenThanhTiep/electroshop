@@ -4,6 +4,8 @@ import com.example.electroshop.dto.CouponApplyResponse;
 import com.example.electroshop.dto.checkout.CheckoutItemRequest;
 import com.example.electroshop.dto.checkout.CheckoutRequest;
 import com.example.electroshop.dto.checkout.CheckoutResponse;
+import com.example.electroshop.entity.FlashSale;
+import com.example.electroshop.entity.FlashSaleItem;
 import com.example.electroshop.entity.Order;
 import com.example.electroshop.entity.OrderItem;
 import com.example.electroshop.entity.Payment;
@@ -13,15 +15,15 @@ import com.example.electroshop.entity.User;
 import com.example.electroshop.entity.enums.OrderStatus;
 import com.example.electroshop.entity.enums.PaymentMethod;
 import com.example.electroshop.entity.enums.PaymentStatus;
+import com.example.electroshop.repository.FlashSaleItemRepository;
+import com.example.electroshop.repository.FlashSaleRepository;
 import com.example.electroshop.repository.OrderRepository;
 import com.example.electroshop.repository.PaymentRepository;
 import com.example.electroshop.repository.ProductRepository;
 import com.example.electroshop.repository.PromotionRepository;
 import com.example.electroshop.repository.UserRepository;
-import com.example.electroshop.entity.FlashSale;
-import com.example.electroshop.entity.FlashSaleItem;
-import com.example.electroshop.repository.FlashSaleItemRepository;
-import com.example.electroshop.repository.FlashSaleRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.transaction.Transactional;
 
@@ -36,6 +38,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -46,6 +49,9 @@ public class CheckoutService {
 
     private static final BigDecimal DEFAULT_SHIPPING_FEE =
             new BigDecimal("30000");
+
+    private final ObjectMapper objectMapper =
+            new ObjectMapper();
 
     private final ProductRepository productRepository;
 
@@ -68,17 +74,17 @@ public class CheckoutService {
     private final OrderBenefitService orderBenefitService;
 
     public CheckoutService(
-        ProductRepository productRepository,
-        OrderRepository orderRepository,
-        PaymentRepository paymentRepository,
-        UserRepository userRepository,
-        VnPayService vnPayService,
-        CouponService couponService,
-        FlashSaleRepository flashSaleRepository,
-        FlashSaleItemRepository flashSaleItemRepository,
-        PromotionRepository promotionRepository,
-        OrderBenefitService orderBenefitService
-) {
+            ProductRepository productRepository,
+            OrderRepository orderRepository,
+            PaymentRepository paymentRepository,
+            UserRepository userRepository,
+            VnPayService vnPayService,
+            CouponService couponService,
+            FlashSaleRepository flashSaleRepository,
+            FlashSaleItemRepository flashSaleItemRepository,
+            PromotionRepository promotionRepository,
+            OrderBenefitService orderBenefitService
+    ) {
         this.productRepository =
                 productRepository;
 
@@ -164,18 +170,10 @@ public class CheckoutService {
                 request.getPaymentMethod()
         );
 
-        order.setBenefitsCommitted(
-        false
-);
+        order.setBenefitsCommitted(false);
 
-order.setBenefitsReleased(
-        false
-);
+        order.setBenefitsReleased(false);
 
-        /*
-         * Sắp xếp ID trước khi khóa để giảm nguy cơ deadlock
-         * khi nhiều đơn có cùng sản phẩm.
-         */
         List<CheckoutItemRequest> sortedItems =
                 request.getItems()
                         .stream()
@@ -189,9 +187,7 @@ order.setBenefitsReleased(
         BigDecimal subtotal =
                 BigDecimal.ZERO;
 
-        for (CheckoutItemRequest requestedItem
-                : sortedItems) {
-
+        for (CheckoutItemRequest requestedItem : sortedItems) {
             Product product =
                     productRepository
                             .findByIdForUpdate(
@@ -228,8 +224,7 @@ order.setBenefitsReleased(
 
             if (
                     product.getPrice() == null ||
-                    product.getPrice()
-                            .compareTo(BigDecimal.ZERO) < 0
+                    product.getPrice().compareTo(BigDecimal.ZERO) < 0
             ) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
@@ -239,47 +234,20 @@ order.setBenefitsReleased(
                 );
             }
 
-            /*
-             * Hiện tại lấy giá gốc của Product.
-             * Giá tùy chọn sẽ bổ sung sau khi biết
-             * chính xác JSON trong product.options.
-             */
+            ResolvedCheckoutPrice resolvedPrice =
+                    resolveCheckoutPrice(
+                            product,
+                            requestedItem.getSelectedOptions(),
+                            quantity
+                    );
+
             BigDecimal unitPrice =
-        resolveCheckoutUnitPrice(
-                product,
-                quantity
-        );
+                    resolvedPrice.getUnitPrice();
 
-FlashSaleItem appliedFlashSaleItem =
-        findAppliedFlashSaleItem(
-                product,
-                quantity,
-                unitPrice
-        );
-
-String priceSource;
-
-if (appliedFlashSaleItem != null) {
-    priceSource =
-            "FLASH_SALE";
-
-} else if (
-        unitPrice.compareTo(
-                product.getPrice()
-        ) < 0
-) {
-    priceSource =
-            "PROMOTION";
-
-} else {
-    priceSource =
-            "REGULAR";
-}
-
-BigDecimal lineTotal =
-        unitPrice.multiply(
-                BigDecimal.valueOf(quantity)
-        );
+            BigDecimal lineTotal =
+                    unitPrice.multiply(
+                            BigDecimal.valueOf(quantity)
+                    );
 
             OrderItem orderItem =
                     new OrderItem();
@@ -309,32 +277,26 @@ BigDecimal lineTotal =
             );
 
             orderItem.setLineTotal(
-        lineTotal
-);
+                    lineTotal
+            );
 
-orderItem.setFlashSaleItemId(
-        appliedFlashSaleItem == null
-                ? null
-                : appliedFlashSaleItem
-                        .getId()
-);
+            orderItem.setFlashSaleItemId(
+                    resolvedPrice.getFlashSaleItem() == null
+                            ? null
+                            : resolvedPrice
+                                    .getFlashSaleItem()
+                                    .getId()
+            );
 
-orderItem.setPriceSource(
-        priceSource
-);
+            orderItem.setPriceSource(
+                    resolvedPrice.getPriceSource()
+            );
 
-order.addItem(orderItem);
+            order.addItem(orderItem);
 
             subtotal =
-                    subtotal.add(
-                            lineTotal
-                    );
+                    subtotal.add(lineTotal);
 
-            /*
-             * Giữ hàng ngay khi tạo đơn.
-             * Nếu VNPAY thất bại hoặc hết hạn,
-             * hệ thống sẽ hoàn lại ở bước sau.
-             */
             product.setStock(
                     product.getStock() - quantity
             );
@@ -356,43 +318,42 @@ order.addItem(orderItem);
                                 .trim();
 
         if (!couponCode.isEmpty()) {
+            CouponApplyResponse couponResult =
+                    couponService
+                            .calculateCoupon(
+                                    couponCode,
+                                    subtotal
+                            );
 
-    CouponApplyResponse couponResult =
-            couponService
-                    .calculateCoupon(
-                            couponCode,
-                            subtotal
-                    );
+            if (
+                    couponResult.getValid() == null ||
+                    !couponResult.getValid()
+            ) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        couponResult.getMessage()
+                );
+            }
 
-    if (
-            couponResult.getValid() == null ||
-            !couponResult.getValid()
-    ) {
-        throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                couponResult.getMessage()
+            discountAmount =
+                    BigDecimal.valueOf(
+                                    couponResult
+                                            .getDiscountAmount()
+                            )
+                            .setScale(
+                                    2,
+                                    RoundingMode.HALF_UP
+                            );
+        }
+
+        order.setCouponCode(
+                couponCode.isEmpty()
+                        ? null
+                        : couponCode.toUpperCase()
         );
-    }
 
-    discountAmount =
-            BigDecimal.valueOf(
-                            couponResult
-                                    .getDiscountAmount()
-                    )
-                    .setScale(
-                            2,
-                            RoundingMode.HALF_UP
-                    );
-}
-
-order.setCouponCode(
-        couponCode.isEmpty()
-                ? null
-                : couponCode.toUpperCase()
-);
-
-BigDecimal totalAmount =
-        subtotal
+        BigDecimal totalAmount =
+                subtotal
                         .add(shippingFee)
                         .subtract(discountAmount)
                         .max(BigDecimal.ZERO)
@@ -401,7 +362,9 @@ BigDecimal totalAmount =
                                 RoundingMode.HALF_UP
                         );
 
-        order.setSubtotal(subtotal);
+        order.setSubtotal(
+                subtotal
+        );
 
         order.setShippingFee(
                 shippingFee
@@ -431,9 +394,7 @@ BigDecimal totalAmount =
                     LocalDateTime.now()
                             .plusMinutes(15)
             );
-
         } else {
-
             order.setOrderStatus(
                     OrderStatus.PENDING_CONFIRMATION
             );
@@ -442,28 +403,20 @@ BigDecimal totalAmount =
         }
 
         Order savedOrder =
-        orderRepository.save(order);
+                orderRepository.save(order);
 
-/*
- * COD không có callback thanh toán.
- * Đơn được xem là hợp lệ sau khi tạo thành công.
- */
-if (
-        request.getPaymentMethod()
-                != PaymentMethod.VNPAY
-) {
-    orderBenefitService
-            .commitBenefits(
-                    savedOrder.getId()
-            );
-}
+        if (
+                request.getPaymentMethod()
+                        != PaymentMethod.VNPAY
+        ) {
+            orderBenefitService
+                    .commitBenefits(
+                            savedOrder.getId()
+                    );
+        }
 
-/*
- * Với VNPAY, mỗi lần thanh toán
- * phải có một Payment riêng.
- */
-String paymentUrl =
-        null;
+        String paymentUrl =
+                null;
 
         if (
                 request.getPaymentMethod()
@@ -567,9 +520,7 @@ String paymentUrl =
             );
         }
 
-        for (CheckoutItemRequest item
-                : request.getItems()) {
-
+        for (CheckoutItemRequest item : request.getItems()) {
             if (item.getProductId() == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
@@ -589,117 +540,73 @@ String paymentUrl =
         }
     }
 
-    private BigDecimal resolveCheckoutUnitPrice(
+    private ResolvedCheckoutPrice resolveCheckoutPrice(
             Product product,
+            String selectedOptionsJson,
             Integer requestedQuantity
     ) {
-        BigDecimal originalPrice =
-                product.getPrice();
+        BigDecimal regularPrice =
+                resolveRegularPriceWithOptions(
+                        product,
+                        selectedOptionsJson
+                );
 
         int quantity =
                 requestedQuantity == null
                         ? 1
                         : requestedQuantity;
 
-        LocalDateTime now =
-                LocalDateTime.now();
+        FlashSaleItem flashSaleItem =
+                findValidActiveFlashSaleItem(
+                        product,
+                        quantity
+                );
 
-        /*
-         * Ưu tiên 1: Flash Sale
-         */
-        FlashSale flashSale =
-                flashSaleRepository
-                        .findFirstByActiveTrueAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualOrderBySortOrderAsc(
-                                now,
-                                now
-                        )
-                        .orElse(null);
+        if (flashSaleItem != null) {
+            Integer discountPercent =
+                    flashSaleItem.getDiscountPercent();
 
-        if (flashSale != null) {
-            FlashSaleItem flashSaleItem =
-                    flashSaleItemRepository
-                            .findFirstByFlashSaleIdAndProductIdAndActiveTrueOrderByIdDesc(
-                                    flashSale.getId(),
-                                    product.getId()
-                            )
-                            .orElse(null);
+            if (
+                    discountPercent != null &&
+                    discountPercent > 0 &&
+                    discountPercent < 100
+            ) {
+                BigDecimal flashSalePrice =
+                        regularPrice
+                                .multiply(
+                                        BigDecimal.valueOf(
+                                                100 - discountPercent
+                                        )
+                                )
+                                .divide(
+                                        BigDecimal.valueOf(100),
+                                        2,
+                                        RoundingMode.HALF_UP
+                                );
 
-            if (flashSaleItem != null) {
-                BigDecimal salePrice =
+                return new ResolvedCheckoutPrice(
+                        flashSalePrice,
+                        "FLASH_SALE",
                         flashSaleItem
-                                .getSalePrice();
+                );
+            }
 
-                boolean validSalePrice =
-                        salePrice != null &&
-                        salePrice.compareTo(
-                                BigDecimal.ZERO
-                        ) > 0 &&
-                        salePrice.compareTo(
-                                originalPrice
-                        ) < 0;
+            BigDecimal salePrice =
+                    flashSaleItem.getSalePrice();
 
-                if (validSalePrice) {
-                    int saleQuantity =
-                            flashSaleItem
-                                    .getSaleQuantity() == null
-                                    ? 0
-                                    : flashSaleItem
-                                            .getSaleQuantity();
-
-                    int soldQuantity =
-                            flashSaleItem
-                                    .getSoldQuantity() == null
-                                    ? 0
-                                    : flashSaleItem
-                                            .getSoldQuantity();
-
-                    int remainingQuantity =
-                            Math.max(
-                                    0,
-                                    saleQuantity -
-                                    soldQuantity
-                            );
-
-                    if (
-                            remainingQuantity <
-                            quantity
-                    ) {
-                        throw new ResponseStatusException(
-                                HttpStatus.CONFLICT,
-                                "Sản phẩm \""
-                                        + product.getName()
-                                        + "\" chỉ còn "
-                                        + remainingQuantity
-                                        + " suất Flash Sale"
-                        );
-                    }
-
-                    Integer limitPerUser =
-                            flashSaleItem
-                                    .getLimitPerUser();
-
-                    if (
-                            limitPerUser != null &&
-                            limitPerUser > 0 &&
-                            quantity >
-                            limitPerUser
-                    ) {
-                        throw new ResponseStatusException(
-                                HttpStatus.CONFLICT,
-                                "Mỗi khách hàng chỉ được mua tối đa "
-                                        + limitPerUser
-                                        + " sản phẩm Flash Sale"
-                        );
-                    }
-
-                    return salePrice;
-                }
+            if (
+                    salePrice != null &&
+                    salePrice.compareTo(BigDecimal.ZERO) > 0 &&
+                    salePrice.compareTo(regularPrice) < 0
+            ) {
+                return new ResolvedCheckoutPrice(
+                        salePrice,
+                        "FLASH_SALE",
+                        flashSaleItem
+                );
             }
         }
 
-        /*
-         * Ưu tiên 2: Promotion
-         */
         Promotion promotion =
                 promotionRepository
                         .findActivePromotionsForProduct(
@@ -712,96 +619,206 @@ String paymentUrl =
 
         if (
                 promotion != null &&
-                promotion
-                        .getDiscountPercent() != null &&
-                promotion
-                        .getDiscountPercent() > 0 &&
-                promotion
-                        .getDiscountPercent() < 100
+                promotion.getDiscountPercent() != null &&
+                promotion.getDiscountPercent() > 0 &&
+                promotion.getDiscountPercent() < 100
         ) {
             BigDecimal discountPercent =
                     BigDecimal.valueOf(
-                            promotion
-                                    .getDiscountPercent()
+                            promotion.getDiscountPercent()
                     );
 
-            return originalPrice
-                    .multiply(
-                            BigDecimal
-                                    .valueOf(100)
-                                    .subtract(
-                                            discountPercent
-                                    )
-                    )
-                    .divide(
-                            BigDecimal
-                                    .valueOf(100),
-                            2,
-                            RoundingMode.HALF_UP
-                    );
+            BigDecimal promotionPrice =
+                    regularPrice
+                            .multiply(
+                                    BigDecimal.valueOf(100)
+                                            .subtract(discountPercent)
+                            )
+                            .divide(
+                                    BigDecimal.valueOf(100),
+                                    2,
+                                    RoundingMode.HALF_UP
+                            );
+
+            return new ResolvedCheckoutPrice(
+                    promotionPrice,
+                    "PROMOTION",
+                    null
+            );
         }
 
-            /*
-     * Giá gốc
-     */
-    return originalPrice;
-}
-
-private FlashSaleItem findAppliedFlashSaleItem(
-        Product product,
-        Integer requestedQuantity,
-        BigDecimal unitPrice
-) {
-    LocalDateTime now =
-            LocalDateTime.now();
-
-    FlashSale flashSale =
-            flashSaleRepository
-                    .findFirstByActiveTrueAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualOrderBySortOrderAsc(
-                            now,
-                            now
-                    )
-                    .orElse(null);
-
-    if (flashSale == null) {
-        return null;
+        return new ResolvedCheckoutPrice(
+                regularPrice,
+                "REGULAR",
+                null
+        );
     }
 
-    FlashSaleItem item =
-            flashSaleItemRepository
-                    .findFirstByFlashSaleIdAndProductIdAndActiveTrueOrderByIdDesc(
-                            flashSale.getId(),
-                            product.getId()
-                    )
-                    .orElse(null);
-
-    if (
-            item == null ||
-            item.getSalePrice() == null
+    private FlashSaleItem findValidActiveFlashSaleItem(
+            Product product,
+            Integer requestedQuantity
     ) {
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        int quantity =
+                requestedQuantity == null
+                        ? 1
+                        : requestedQuantity;
+
+        List<FlashSale> flashSales =
+                flashSaleRepository
+                        .findActiveFlashSalesForHomePage(now);
+
+        for (FlashSale flashSale : flashSales) {
+            FlashSaleItem item =
+                    flashSaleItemRepository
+                            .findFirstByFlashSaleIdAndProductIdAndActiveTrueOrderByIdDesc(
+                                    flashSale.getId(),
+                                    product.getId()
+                            )
+                            .orElse(null);
+
+            if (item == null) {
+                continue;
+            }
+
+            boolean hasValidPercent =
+                    item.getDiscountPercent() != null &&
+                    item.getDiscountPercent() > 0 &&
+                    item.getDiscountPercent() < 100;
+
+            boolean hasValidSalePrice =
+                    item.getSalePrice() != null &&
+                    item.getSalePrice().compareTo(BigDecimal.ZERO) > 0;
+
+            if (!hasValidPercent && !hasValidSalePrice) {
+                continue;
+            }
+
+            int saleQuantity =
+                    item.getSaleQuantity() == null
+                            ? 0
+                            : item.getSaleQuantity();
+
+            int soldQuantity =
+                    item.getSoldQuantity() == null
+                            ? 0
+                            : item.getSoldQuantity();
+
+            int remainingQuantity =
+                    Math.max(
+                            0,
+                            saleQuantity - soldQuantity
+                    );
+
+            if (remainingQuantity < quantity) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Sản phẩm \""
+                                + product.getName()
+                                + "\" chỉ còn "
+                                + remainingQuantity
+                                + " suất Flash Sale"
+                );
+            }
+
+            Integer limitPerUser =
+                    item.getLimitPerUser();
+
+            if (
+                    limitPerUser != null &&
+                    limitPerUser > 0 &&
+                    quantity > limitPerUser
+            ) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Mỗi khách hàng chỉ được mua tối đa "
+                                + limitPerUser
+                                + " sản phẩm Flash Sale"
+                );
+            }
+
+            return item;
+        }
+
         return null;
     }
 
-    /*
-     * Chỉ đánh dấu Flash Sale nếu đơn giá
-     * thật sự bằng salePrice.
-     *
-     * Điều này tránh nhầm với Promotion.
-     */
-    if (
-            unitPrice.compareTo(
-                    item.getSalePrice()
-            ) != 0
+    private BigDecimal resolveRegularPriceWithOptions(
+            Product product,
+            String selectedOptionsJson
     ) {
-        return null;
+        BigDecimal basePrice =
+                product.getPrice() == null
+                        ? BigDecimal.ZERO
+                        : product.getPrice();
+
+        if (isBlank(selectedOptionsJson)) {
+            return basePrice;
+        }
+
+        try {
+            Map<String, Object> selectedOptions =
+                    objectMapper.readValue(
+                            selectedOptionsJson,
+                            new TypeReference<Map<String, Object>>() {
+                            }
+                    );
+
+            BigDecimal maxPrice =
+                    basePrice;
+
+            for (Object optionValue : selectedOptions.values()) {
+                if (!(optionValue instanceof Map<?, ?> optionMap)) {
+                    continue;
+                }
+
+                Object priceValue =
+                        optionMap.get("price");
+
+                BigDecimal optionPrice =
+                        parseOptionPrice(priceValue);
+
+                if (optionPrice.compareTo(maxPrice) > 0) {
+                    maxPrice =
+                            optionPrice;
+                }
+            }
+
+            return maxPrice;
+        } catch (Exception exception) {
+            return basePrice;
+        }
     }
 
-    return item;
-}
+    private BigDecimal parseOptionPrice(
+            Object value
+    ) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
 
-private BigDecimal calculateShippingFee(
-        BigDecimal subtotal
-) {
+        if (value instanceof Number numberValue) {
+            return BigDecimal.valueOf(
+                    numberValue.doubleValue()
+            );
+        }
+
+        String normalized =
+                String.valueOf(value)
+                        .replaceAll("[^0-9]", "");
+
+        if (normalized.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        return new BigDecimal(normalized);
+    }
+
+    private BigDecimal calculateShippingFee(
+            BigDecimal subtotal
+    ) {
         if (
                 subtotal.compareTo(
                         FREE_SHIPPING_THRESHOLD
@@ -872,5 +889,41 @@ private BigDecimal calculateShippingFee(
     ) {
         return value == null ||
                 value.trim().isEmpty();
+    }
+
+    private static class ResolvedCheckoutPrice {
+
+        private final BigDecimal unitPrice;
+
+        private final String priceSource;
+
+        private final FlashSaleItem flashSaleItem;
+
+        private ResolvedCheckoutPrice(
+                BigDecimal unitPrice,
+                String priceSource,
+                FlashSaleItem flashSaleItem
+        ) {
+            this.unitPrice =
+                    unitPrice;
+
+            this.priceSource =
+                    priceSource;
+
+            this.flashSaleItem =
+                    flashSaleItem;
+        }
+
+        public BigDecimal getUnitPrice() {
+            return unitPrice;
+        }
+
+        public String getPriceSource() {
+            return priceSource;
+        }
+
+        public FlashSaleItem getFlashSaleItem() {
+            return flashSaleItem;
+        }
     }
 }

@@ -1591,26 +1591,25 @@ export default function HomePage() {
       {/* CÁC KHỐI HOMEPAGE RENDER THEO THỨ TỰ ADMIN THIẾT LẬP */}
 
       {homepageRenderItems.map((item) => {
-        {
-          /* KHỐI GIỜ VÀNG FLASH SALE TỪ API MỚI */
-        }
+        if (item.type === "FLASH_SALE") {
+          const activeFlashSale = item.flashSale;
 
-        {
-          activeFlashSales.map((activeFlashSale) => (
+          return (
             <section
-              id="flash-sale"
+              key={item.key}
+              id={`flash-sale-${activeFlashSale.id}`}
               className="golden-hour-pro-section flash-bg-full"
               style={{
                 backgroundImage: `
-      linear-gradient(
-        180deg,
-        rgba(130, 0, 0, 0.08) 0%,
-        rgba(255, 77, 0, 0.18) 38%,
-        rgba(255, 245, 235, 0.88) 58%,
-        rgba(255, 255, 255, 0.96) 100%
-      ),
-      url(${activeFlashSale.bannerImage || "/images/golden-hour-bg.png"})
-    `,
+            linear-gradient(
+              180deg,
+              rgba(130, 0, 0, 0.08) 0%,
+              rgba(255, 77, 0, 0.18) 38%,
+              rgba(255, 245, 235, 0.88) 58%,
+              rgba(255, 255, 255, 0.96) 100%
+            ),
+            url(${activeFlashSale.bannerImage || "/images/golden-hour-bg.png"})
+          `,
               }}
             >
               <div className="golden-hour-header banner-has-title">
@@ -1693,17 +1692,19 @@ export default function HomePage() {
                 <div
                   className={`golden-hour-grid golden-hour-grid-${activeFlashSale.id}`}
                 >
-                  {activeFlashSale.items.map((item) => {
-                    const soldPercent = Number(item.soldPercent || 0);
+                  {(activeFlashSale.items || []).map((flashItem) => {
+                    const soldPercent = Number(flashItem.soldPercent || 0);
 
                     return (
                       <div
                         className="golden-hour-card"
-                        key={item.itemId}
-                        onClick={() => navigate(`/product/${item.productId}`)}
+                        key={flashItem.itemId}
+                        onClick={() =>
+                          navigate(`/product/${flashItem.productId}`)
+                        }
                       >
                         <div className="golden-hour-sale-badge">
-                          -{item.discountPercent || 0}%
+                          -{flashItem.discountPercent || 0}%
                         </div>
 
                         <div className="golden-hour-installment">
@@ -1711,18 +1712,21 @@ export default function HomePage() {
                         </div>
 
                         <div className="golden-hour-image-box">
-                          <img src={item.image} alt={item.productName} />
+                          <img
+                            src={flashItem.image}
+                            alt={flashItem.productName}
+                          />
                         </div>
 
                         <div className="golden-hour-card-info">
-                          <h4>{item.productName}</h4>
+                          <h4>{flashItem.productName}</h4>
 
                           <p className="golden-hour-price">
-                            {formatCurrency(item.salePrice)}
+                            {formatCurrency(flashItem.salePrice)}
                           </p>
 
                           <p className="golden-hour-old-price">
-                            {formatCurrency(item.originalPrice)}
+                            {formatCurrency(flashItem.originalPrice)}
                           </p>
 
                           <div className="golden-hour-gift">
@@ -1748,13 +1752,13 @@ export default function HomePage() {
                               e.stopPropagation();
 
                               const flashSaleProduct = {
-                                id: item.productId,
-                                name: item.productName,
-                                image: item.image,
-                                price: item.salePrice,
-                                originalPrice: item.originalPrice,
-                                flashSalePrice: item.salePrice,
-                                flashSaleItemId: item.itemId,
+                                id: flashItem.productId,
+                                name: flashItem.productName,
+                                image: flashItem.image,
+                                price: flashItem.salePrice,
+                                originalPrice: flashItem.originalPrice,
+                                flashSalePrice: flashItem.salePrice,
+                                flashSaleItemId: flashItem.itemId,
                                 isFlashSale: true,
                                 quantity: 1,
                               };
@@ -1836,7 +1840,7 @@ export default function HomePage() {
                 <span></span>
               </div>
             </section>
-          ));
+          );
         }
         if (item.type === "BANNER_SECTION") {
           const section = item.section;
