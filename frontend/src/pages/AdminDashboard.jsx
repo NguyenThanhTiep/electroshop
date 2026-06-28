@@ -2175,6 +2175,145 @@ export default function AdminDashboard() {
     (section) => Number(section.id) === Number(selectedBannerSectionId),
   );
 
+  const toDateTimeLocalValue = (value) => {
+    if (!value) {
+      return "";
+    }
+
+    return String(value).slice(0, 16);
+  };
+
+  const validateFlashSaleForm = () => {
+    const title = flashSaleForm.title.trim();
+    const bannerImage = flashSaleForm.bannerImage.trim();
+    const sortOrder = Number(flashSaleForm.sortOrder);
+
+    if (!title) {
+      alert("Vui lòng nhập tên chiến dịch Flash Sale");
+      return false;
+    }
+
+    if (!bannerImage) {
+      alert("Vui lòng chọn ảnh banner Flash Sale");
+      return false;
+    }
+
+    if (!flashSaleForm.startTime) {
+      alert("Vui lòng chọn thời gian bắt đầu");
+      return false;
+    }
+
+    if (!flashSaleForm.endTime) {
+      alert("Vui lòng chọn thời gian kết thúc");
+      return false;
+    }
+
+    if (flashSaleForm.startTime >= flashSaleForm.endTime) {
+      alert("Thời gian bắt đầu phải trước thời gian kết thúc");
+      return false;
+    }
+
+    if (!sortOrder || sortOrder <= 0) {
+      alert("Thứ tự hiển thị phải lớn hơn 0");
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateFlashSaleItemForm = () => {
+    const productId = Number(flashSaleItemForm.productId);
+    const salePrice = Number(flashSaleItemForm.salePrice);
+    const discountPercent = Number(flashSaleItemForm.discountPercent);
+    const saleQuantity = Number(flashSaleItemForm.saleQuantity);
+    const soldQuantity = Number(flashSaleItemForm.soldQuantity || 0);
+    const limitPerUser = Number(flashSaleItemForm.limitPerUser || 1);
+
+    if (!selectedFlashSaleId) {
+      alert("Vui lòng chọn chiến dịch Flash Sale trước");
+      return false;
+    }
+
+    if (!productId) {
+      alert("Vui lòng chọn sản phẩm");
+      return false;
+    }
+
+    const selectedProduct = products.find(
+      (item) => Number(item.id) === productId,
+    );
+
+    if (!selectedProduct) {
+      alert("Sản phẩm Flash Sale không tồn tại trong danh sách");
+      return false;
+    }
+
+    const originalPrice = Number(selectedProduct.price || 0);
+
+    if (!originalPrice || originalPrice <= 0) {
+      alert("Giá gốc sản phẩm không hợp lệ");
+      return false;
+    }
+
+    if (!salePrice || salePrice <= 0) {
+      alert("Giá Flash Sale phải lớn hơn 0");
+      return false;
+    }
+
+    if (salePrice >= originalPrice) {
+      alert("Giá Flash Sale phải nhỏ hơn giá gốc sản phẩm");
+      return false;
+    }
+
+    if (!discountPercent || discountPercent <= 0) {
+      alert("Phần trăm giảm giá phải lớn hơn 0");
+      return false;
+    }
+
+    if (discountPercent > 100) {
+      alert("Phần trăm giảm giá không được vượt quá 100");
+      return false;
+    }
+
+    if (!saleQuantity || saleQuantity <= 0) {
+      alert("Số lượng Flash Sale phải lớn hơn 0");
+      return false;
+    }
+
+    if (soldQuantity < 0) {
+      alert("Số lượng đã bán không được nhỏ hơn 0");
+      return false;
+    }
+
+    if (soldQuantity > saleQuantity) {
+      alert("Số lượng đã bán không được lớn hơn số lượng Flash Sale");
+      return false;
+    }
+
+    if (!limitPerUser || limitPerUser <= 0) {
+      alert("Giới hạn mua mỗi khách phải lớn hơn 0");
+      return false;
+    }
+
+    if (limitPerUser > saleQuantity) {
+      alert("Giới hạn mua mỗi khách không được lớn hơn số lượng Flash Sale");
+      return false;
+    }
+
+    const duplicatedItem = flashSaleItems.some(
+      (item) =>
+        Number(item.productId) === productId &&
+        Number(item.id) !== Number(editingFlashSaleItemId),
+    );
+
+    if (duplicatedItem) {
+      alert("Sản phẩm này đã có trong chiến dịch Flash Sale");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleFlashSaleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -2201,44 +2340,42 @@ export default function AdminDashboard() {
   const handleSaveFlashSale = async (e) => {
     e.preventDefault();
 
-    if (!flashSaleForm.title.trim()) {
-      alert("Vui lòng nhập tên chiến dịch");
-      return;
-    }
-
-    if (!flashSaleForm.startTime) {
-      alert("Vui lòng chọn thời gian bắt đầu");
-      return;
-    }
-
-    if (!flashSaleForm.endTime) {
-      alert("Vui lòng chọn thời gian kết thúc");
+    if (!validateFlashSaleForm()) {
       return;
     }
 
     const payload = {
-      ...flashSaleForm,
+      title: flashSaleForm.title.trim(),
+      subtitle: flashSaleForm.subtitle.trim(),
+      bannerImage: flashSaleForm.bannerImage.trim(),
+      startTime: flashSaleForm.startTime,
+      endTime: flashSaleForm.endTime,
+      active: flashSaleForm.active,
       sortOrder: Number(flashSaleForm.sortOrder) || 1,
     };
 
     try {
       if (editingFlashSaleId) {
         await updateFlashSale(editingFlashSaleId, payload);
-
-        alert("Cập nhật chiến dịch thành công");
+        alert("Cập nhật chiến dịch Flash Sale thành công");
       } else {
         await createFlashSale(payload);
-
-        alert("Tạo chiến dịch thành công");
+        alert("Tạo chiến dịch Flash Sale thành công");
       }
 
       await fetchFlashSales();
-
       resetFlashSaleForm();
     } catch (error) {
       console.log(error);
 
-      alert("Lưu chiến dịch thất bại");
+      alert(
+        getApiErrorMessage(
+          error,
+          editingFlashSaleId
+            ? "Cập nhật chiến dịch Flash Sale thất bại"
+            : "Tạo chiến dịch Flash Sale thất bại",
+        ),
+      );
     }
   };
 
@@ -2247,17 +2384,11 @@ export default function AdminDashboard() {
 
     setFlashSaleForm({
       title: flashSale.title || "",
-
       subtitle: flashSale.subtitle || "",
-
       bannerImage: flashSale.bannerImage || "/images/golden-hour-header.png",
-
-      startTime: flashSale.startTime || "",
-
-      endTime: flashSale.endTime || "",
-
+      startTime: toDateTimeLocalValue(flashSale.startTime),
+      endTime: toDateTimeLocalValue(flashSale.endTime),
       active: flashSale.active ?? true,
-
       sortOrder: flashSale.sortOrder || 1,
     });
 
@@ -2268,7 +2399,15 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteFlashSale = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa chiến dịch này?")) {
+    const flashSale = flashSales.find((item) => Number(item.id) === Number(id));
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa chiến dịch Flash Sale này không?\n\n` +
+        `${flashSale?.title ? `Tên: ${flashSale.title}\n` : ""}` +
+        `\nLưu ý: Nếu chiến dịch đã phát sinh lượt bán, hệ thống sẽ không cho xóa. Bạn nên tắt chiến dịch thay vì xóa.`,
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -2282,11 +2421,11 @@ export default function AdminDashboard() {
 
       await fetchFlashSales();
 
-      alert("Xóa chiến dịch thành công");
+      alert("Xóa chiến dịch Flash Sale thành công");
     } catch (error) {
       console.log(error);
 
-      alert("Xóa chiến dịch thất bại");
+      alert(getApiErrorMessage(error, "Xóa chiến dịch Flash Sale thất bại"));
     }
   };
 
@@ -2299,10 +2438,29 @@ export default function AdminDashboard() {
   const handleFlashSaleItemChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    setFlashSaleItemForm({
+    const nextForm = {
       ...flashSaleItemForm,
       [name]: type === "checkbox" ? checked : value,
-    });
+    };
+
+    if (name === "salePrice" || name === "productId") {
+      const productId = name === "productId" ? value : nextForm.productId;
+
+      const selectedProduct = products.find(
+        (item) => Number(item.id) === Number(productId),
+      );
+
+      const originalPrice = Number(selectedProduct?.price || 0);
+      const salePrice = Number(nextForm.salePrice || 0);
+
+      if (originalPrice > 0 && salePrice > 0 && salePrice < originalPrice) {
+        nextForm.discountPercent = Math.round(
+          ((originalPrice - salePrice) * 100) / originalPrice,
+        );
+      }
+    }
+
+    setFlashSaleItemForm(nextForm);
   };
 
   const resetFlashSaleItemForm = () => {
@@ -2322,17 +2480,15 @@ export default function AdminDashboard() {
   const handleProductForFlashSaleChange = (e) => {
     const productId = e.target.value;
 
-    const product = products.find(
+    const selectedProduct = products.find(
       (item) => Number(item.id) === Number(productId),
     );
 
     let discountPercent = "";
-
     let salePrice = "";
 
-    if (product?.price) {
-      salePrice = Math.round(Number(product.price) * 0.9);
-
+    if (selectedProduct?.price) {
+      salePrice = Math.round(Number(selectedProduct.price) * 0.9);
       discountPercent = 10;
     }
 
@@ -2347,55 +2503,42 @@ export default function AdminDashboard() {
   const handleSaveFlashSaleItem = async (e) => {
     e.preventDefault();
 
-    if (!selectedFlashSaleId) {
-      alert("Vui lòng chọn chiến dịch flash sale trước");
-      return;
-    }
-
-    if (!flashSaleItemForm.productId) {
-      alert("Vui lòng chọn sản phẩm");
-      return;
-    }
-
-    if (!flashSaleItemForm.salePrice) {
-      alert("Vui lòng nhập giá sale");
+    if (!validateFlashSaleItemForm()) {
       return;
     }
 
     const payload = {
-      ...flashSaleItemForm,
-
       productId: Number(flashSaleItemForm.productId),
-
       salePrice: Number(flashSaleItemForm.salePrice),
-
       discountPercent: Number(flashSaleItemForm.discountPercent) || 0,
-
-      saleQuantity: Number(flashSaleItemForm.saleQuantity) || 0,
-
-      soldQuantity: Number(flashSaleItemForm.soldQuantity) || 0,
-
-      limitPerUser: Number(flashSaleItemForm.limitPerUser) || 1,
+      saleQuantity: Number(flashSaleItemForm.saleQuantity),
+      soldQuantity: Number(flashSaleItemForm.soldQuantity || 0),
+      limitPerUser: Number(flashSaleItemForm.limitPerUser || 1),
+      active: flashSaleItemForm.active,
     };
 
     try {
       if (editingFlashSaleItemId) {
         await updateFlashSaleItem(editingFlashSaleItemId, payload);
-
-        alert("Cập nhật sản phẩm flash sale thành công");
+        alert("Cập nhật sản phẩm Flash Sale thành công");
       } else {
         await addFlashSaleItem(selectedFlashSaleId, payload);
-
-        alert("Thêm sản phẩm vào flash sale thành công");
+        alert("Thêm sản phẩm vào Flash Sale thành công");
       }
 
       await fetchFlashSaleItems(selectedFlashSaleId);
-
       resetFlashSaleItemForm();
     } catch (error) {
       console.log(error);
 
-      alert("Lưu sản phẩm flash sale thất bại");
+      alert(
+        getApiErrorMessage(
+          error,
+          editingFlashSaleItemId
+            ? "Cập nhật sản phẩm Flash Sale thất bại"
+            : "Thêm sản phẩm vào Flash Sale thất bại",
+        ),
+      );
     }
   };
 
@@ -2403,18 +2546,27 @@ export default function AdminDashboard() {
     setEditingFlashSaleItemId(item.id);
 
     setFlashSaleItemForm({
-      productId: item.productId || "",
-
-      salePrice: item.salePrice || "",
-
-      discountPercent: item.discountPercent || "",
-
-      saleQuantity: item.saleQuantity || 100,
-
-      soldQuantity: item.soldQuantity || 0,
-
-      limitPerUser: item.limitPerUser || 1,
-
+      productId: item.productId ? String(item.productId) : "",
+      salePrice:
+        item.salePrice !== null && item.salePrice !== undefined
+          ? String(item.salePrice)
+          : "",
+      discountPercent:
+        item.discountPercent !== null && item.discountPercent !== undefined
+          ? String(item.discountPercent)
+          : "",
+      saleQuantity:
+        item.saleQuantity !== null && item.saleQuantity !== undefined
+          ? String(item.saleQuantity)
+          : "100",
+      soldQuantity:
+        item.soldQuantity !== null && item.soldQuantity !== undefined
+          ? String(item.soldQuantity)
+          : "0",
+      limitPerUser:
+        item.limitPerUser !== null && item.limitPerUser !== undefined
+          ? String(item.limitPerUser)
+          : "1",
       active: item.active ?? true,
     });
 
@@ -2425,20 +2577,30 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteFlashSaleItem = async (itemId) => {
-    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này khỏi flash sale?")) {
+    const item = flashSaleItems.find(
+      (flashSaleItem) => Number(flashSaleItem.id) === Number(itemId),
+    );
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa sản phẩm này khỏi Flash Sale không?\n\n` +
+        `${item?.productId ? `ID sản phẩm: ${item.productId}\n` : ""}` +
+        `${item?.salePrice ? `Giá sale: ${formatAdminPrice(item.salePrice)}\n` : ""}` +
+        `\nLưu ý: Nếu sản phẩm đã phát sinh lượt bán trong Flash Sale, hệ thống sẽ không cho xóa. Bạn nên tắt sản phẩm này thay vì xóa.`,
+    );
+
+    if (!confirmed) {
       return;
     }
 
     try {
       await deleteFlashSaleItem(itemId);
-
       await fetchFlashSaleItems(selectedFlashSaleId);
 
-      alert("Xóa sản phẩm flash sale thành công");
+      alert("Xóa sản phẩm Flash Sale thành công");
     } catch (error) {
       console.log(error);
 
-      alert("Xóa sản phẩm flash sale thất bại");
+      alert(getApiErrorMessage(error, "Xóa sản phẩm Flash Sale thất bại"));
     }
   };
 
