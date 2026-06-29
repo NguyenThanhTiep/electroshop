@@ -56,7 +56,11 @@ import {
   updateProduct,
 } from "../services/productApi";
 
-import { getOrders, updateOrderStatus } from "../services/orderApi";
+import {
+  getOrders,
+  getOrderById,
+  updateOrderStatus,
+} from "../services/orderApi";
 
 import {
   getPromotions,
@@ -117,6 +121,57 @@ const PAYMENT_METHOD_LABELS = {
   VNPAY: "VNPAY",
 };
 
+const ADMIN_MENU_INFO = {
+  overview: {
+    icon: "📊",
+    label: "Tổng quan",
+    title: "Trang quản trị",
+    description:
+      "Theo dõi nhanh sản phẩm, đơn hàng, khuyến mãi và người dùng trong hệ thống.",
+  },
+  products: {
+    icon: "📦",
+    label: "Sản phẩm",
+    title: "Quản lý sản phẩm",
+    description:
+      "Thêm, cập nhật, tìm kiếm và quản lý toàn bộ sản phẩm của ElectroShop.",
+  },
+  promotions: {
+    icon: "🔥",
+    label: "Khuyến mãi",
+    title: "Quản lý khuyến mãi",
+    description: "Điều chỉnh chương trình giảm giá, mã coupon và Flash Sale.",
+  },
+  homepage: {
+    icon: "🖼",
+    label: "Trang chủ",
+    title: "Quản lý trang chủ",
+    description:
+      "Cấu hình banner, khối hiển thị và nội dung nổi bật ngoài website.",
+  },
+  categories: {
+    icon: "🗂",
+    label: "Danh mục",
+    title: "Quản lý danh mục",
+    description:
+      "Quản lý danh mục sản phẩm và thương hiệu theo từng nhóm hàng.",
+  },
+  orders: {
+    icon: "🧾",
+    label: "Đơn hàng",
+    title: "Quản lý đơn hàng",
+    description:
+      "Xác nhận, cập nhật trạng thái và xem chi tiết đơn hàng của khách.",
+  },
+  users: {
+    icon: "👥",
+    label: "Người dùng",
+    title: "Quản lý người dùng",
+    description:
+      "Theo dõi tài khoản, khóa, mở khóa hoặc xóa người dùng trong hệ thống.",
+  },
+};
+
 /*
  * Các trạng thái mà Admin
  * được phép chuyển tiếp.
@@ -151,6 +206,29 @@ const formatOrderDate = (value) => {
   }
 
   return new Date(value).toLocaleString("vi-VN");
+};
+
+const getOrderItemOptions = (selectedOptions) => {
+  if (!selectedOptions) {
+    return [];
+  }
+
+  try {
+    const parsedOptions =
+      typeof selectedOptions === "string"
+        ? JSON.parse(selectedOptions)
+        : selectedOptions;
+
+    return Object.entries(parsedOptions || {}).map(([groupName, option]) => ({
+      groupName,
+      optionName:
+        typeof option === "object" && option !== null
+          ? option.name || option.value || ""
+          : String(option || ""),
+    }));
+  } catch (error) {
+    return [];
+  }
 };
 
 export default function AdminDashboard() {
@@ -242,13 +320,29 @@ export default function AdminDashboard() {
 
   const [products, setProducts] = useState([]);
 
+  const [productSearchKeyword, setProductSearchKeyword] = useState("");
+  const [productCategoryFilter, setProductCategoryFilter] = useState("");
+  const [productBrandFilter, setProductBrandFilter] = useState("");
+  const [productStockFilter, setProductStockFilter] = useState("ALL");
+  const [productSortMode, setProductSortMode] = useState("ID_DESC");
+  const [productPage, setProductPage] = useState(1);
+  const [productFormRefreshing, setProductFormRefreshing] = useState(false);
+
   const [categories, setCategories] = useState([]);
 
   const [orders, setOrders] = useState([]);
+  const [orderSearchKeyword, setOrderSearchKeyword] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("ALL");
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderRefreshing, setOrderRefreshing] = useState(false);
+  const [selectedAdminOrder, setSelectedAdminOrder] = useState(null);
+  const [orderDetailLoading, setOrderDetailLoading] = useState(false);
 
   const [users, setUsers] = useState([]);
-
   const [userSearchKeyword, setUserSearchKeyword] = useState("");
+  const [userStatusFilter, setUserStatusFilter] = useState("ALL");
+  const [userPage, setUserPage] = useState(1);
 
   const [promotionSubTab, setPromotionSubTab] = useState("product-discount");
 
@@ -459,6 +553,24 @@ export default function AdminDashboard() {
 
     fetchFlashSales();
   }, []);
+
+  useEffect(() => {
+    setProductPage(1);
+  }, [
+    productSearchKeyword,
+    productCategoryFilter,
+    productBrandFilter,
+    productStockFilter,
+    productSortMode,
+  ]);
+
+  useEffect(() => {
+    setOrderPage(1);
+  }, [orderSearchKeyword, orderStatusFilter, paymentStatusFilter]);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [userSearchKeyword, userStatusFilter]);
 
   const fetchBrands = async () => {
     try {
@@ -703,13 +815,36 @@ export default function AdminDashboard() {
   };
 
   const fetchOrders = async () => {
+    setOrderRefreshing(true);
+
     try {
       const data = await getOrders();
 
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
+
+      return true;
     } catch (error) {
       console.log(error);
+
+      alert(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Không thể tải lại danh sách đơn hàng",
+      );
+
+      return false;
+    } finally {
+      setOrderRefreshing(false);
     }
+  };
+
+  const handleRefreshOrders = async () => {
+    setOrderSearchKeyword("");
+    setOrderStatusFilter("ALL");
+    setPaymentStatusFilter("ALL");
+    setOrderPage(1);
+
+    await fetchOrders();
   };
 
   const fetchUsers = async () => {
@@ -822,6 +957,85 @@ export default function AdminDashboard() {
       setFlashSaleItems(Array.isArray(data) ? data : []);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const handleRefreshProductForm = async () => {
+    const confirmed = window.confirm(
+      "Bạn có chắc muốn làm mới form sản phẩm? Dữ liệu đang nhập sẽ bị xóa.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setProductFormRefreshing(true);
+
+    try {
+      localStorage.removeItem("adminProductDraft");
+      localStorage.removeItem("adminSpecificationsDraft");
+      localStorage.removeItem("adminHighlightsDraft");
+      localStorage.removeItem("adminPromotionsDraft");
+
+      setEditingId(null);
+
+      setProduct({
+        name: "",
+        category: "",
+        brand: "",
+        price: "",
+        image: "",
+        images: [],
+        description: "",
+        stock: "",
+      });
+
+      setSpecifications([
+        {
+          key: "",
+          value: "",
+        },
+      ]);
+
+      setHighlights([
+        {
+          icon: "🖥",
+          title: "",
+          description: "",
+        },
+      ]);
+
+      setPromotions([
+        {
+          icon: "🎁",
+          title: "",
+          description: "",
+        },
+      ]);
+
+      setProductOptions([
+        {
+          groupName: "",
+          values: [
+            {
+              name: "",
+              price: "",
+            },
+          ],
+        },
+      ]);
+
+      await fetchProducts();
+      await fetchCategories();
+      await fetchBrands();
+
+      alert("Đã làm mới form sản phẩm");
+    } catch (error) {
+      console.log(error);
+
+      alert("Không thể làm mới form sản phẩm");
+    } finally {
+      setProductFormRefreshing(false);
     }
   };
 
@@ -1557,6 +1771,14 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleOpenProductDetail = (productId) => {
+    if (!productId) {
+      return;
+    }
+
+    navigate(`/product/${productId}`);
+  };
+
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm("Bạn có chắc muốn xóa?");
     if (!confirmDelete) return;
@@ -1576,6 +1798,36 @@ export default function AdminDashboard() {
 
       alert(message);
     }
+  };
+
+  const handleOpenOrderDetail = async (order) => {
+    if (!order?.id) {
+      return;
+    }
+
+    setSelectedAdminOrder(order);
+    setOrderDetailLoading(true);
+
+    try {
+      const data = await getOrderById(order.id);
+
+      setSelectedAdminOrder(data || order);
+    } catch (error) {
+      console.error("Lỗi tải chi tiết đơn hàng:", error);
+
+      alert(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Không thể tải chi tiết đơn hàng",
+      );
+    } finally {
+      setOrderDetailLoading(false);
+    }
+  };
+
+  const handleCloseOrderDetail = () => {
+    setSelectedAdminOrder(null);
+    setOrderDetailLoading(false);
   };
 
   const handleUpdateStatus = async (id, status) => {
@@ -2624,32 +2876,195 @@ export default function AdminDashboard() {
     return Number(value || 0).toLocaleString("vi-VN") + "đ";
   };
 
+  const ADMIN_PAGE_SIZE = 10;
+
+  const normalizeText = (value) => {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  };
+
+  const paginateItems = (items, page) => {
+    const safePage = Number(page) || 1;
+    const startIndex = (safePage - 1) * ADMIN_PAGE_SIZE;
+
+    return items.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
+  };
+
+  const getTotalPages = (items) => {
+    return Math.max(1, Math.ceil(items.length / ADMIN_PAGE_SIZE));
+  };
+
+  const renderPagination = (currentPage, totalPages, onPageChange) => {
+    if (totalPages <= 1) {
+      return null;
+    }
+
+    const pages = [];
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    for (let page = startPage; page <= endPage; page += 1) {
+      pages.push(page);
+    }
+
+    return (
+      <div className="admin-pagination">
+        <button
+          type="button"
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(currentPage - 1)}
+        >
+          Trước
+        </button>
+
+        {pages.map((page) => (
+          <button
+            type="button"
+            key={page}
+            className={page === currentPage ? "active" : ""}
+            onClick={() => onPageChange(page)}
+          >
+            {page}
+          </button>
+        ))}
+
+        <button
+          type="button"
+          disabled={currentPage >= totalPages}
+          onClick={() => onPageChange(currentPage + 1)}
+        >
+          Sau
+        </button>
+      </div>
+    );
+  };
+
+  const filteredProducts = products
+    .filter((item) => {
+      const keyword = normalizeText(productSearchKeyword);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(item.id).includes(keyword) ||
+        normalizeText(item.name).includes(keyword) ||
+        normalizeText(item.category).includes(keyword) ||
+        normalizeText(item.brand).includes(keyword);
+
+      const matchesCategory =
+        !productCategoryFilter || item.category === productCategoryFilter;
+
+      const matchesBrand =
+        !productBrandFilter || item.brand === productBrandFilter;
+
+      const stock = Number(item.stock || 0);
+
+      const matchesStock =
+        productStockFilter === "ALL" ||
+        (productStockFilter === "IN_STOCK" && stock > 5) ||
+        (productStockFilter === "LOW_STOCK" && stock > 0 && stock <= 5) ||
+        (productStockFilter === "OUT_OF_STOCK" && stock <= 0);
+
+      return matchesKeyword && matchesCategory && matchesBrand && matchesStock;
+    })
+    .sort((a, b) => {
+      if (productSortMode === "ID_ASC") {
+        return Number(a.id || 0) - Number(b.id || 0);
+      }
+
+      if (productSortMode === "NAME_ASC") {
+        return normalizeText(a.name).localeCompare(normalizeText(b.name));
+      }
+
+      if (productSortMode === "PRICE_ASC") {
+        return Number(a.price || 0) - Number(b.price || 0);
+      }
+
+      if (productSortMode === "PRICE_DESC") {
+        return Number(b.price || 0) - Number(a.price || 0);
+      }
+
+      if (productSortMode === "STOCK_ASC") {
+        return Number(a.stock || 0) - Number(b.stock || 0);
+      }
+
+      if (productSortMode === "STOCK_DESC") {
+        return Number(b.stock || 0) - Number(a.stock || 0);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const productTotalPages = getTotalPages(filteredProducts);
+  const paginatedProducts = paginateItems(filteredProducts, productPage);
+
+  const getOrderTimeValue = (order) => {
+    const timeValue =
+      order.createdAt ||
+      order.updatedAt ||
+      order.orderDate ||
+      order.createdDate ||
+      "";
+
+    const timestamp = Date.parse(timeValue);
+
+    return Number.isNaN(timestamp) ? Number(order.id || 0) : timestamp;
+  };
+
+  const filteredOrders = orders
+    .filter((order) => {
+      const keyword = normalizeText(orderSearchKeyword);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(order.orderCode).includes(keyword) ||
+        normalizeText(order.customerName).includes(keyword) ||
+        normalizeText(order.phone).includes(keyword) ||
+        normalizeText(order.email).includes(keyword) ||
+        normalizeText(order.id).includes(keyword);
+
+      const matchesOrderStatus =
+        orderStatusFilter === "ALL" || order.orderStatus === orderStatusFilter;
+
+      const matchesPaymentStatus =
+        paymentStatusFilter === "ALL" ||
+        order.paymentStatus === paymentStatusFilter;
+
+      return matchesKeyword && matchesOrderStatus && matchesPaymentStatus;
+    })
+    .sort((a, b) => getOrderTimeValue(b) - getOrderTimeValue(a));
+
+  const orderTotalPages = getTotalPages(filteredOrders);
+  const paginatedOrders = paginateItems(filteredOrders, orderPage);
+
   const managedUsers = users.filter(
     (user) => String(user.role || "").toLowerCase() !== "admin",
   );
 
   const filteredUsers = managedUsers.filter((user) => {
-    const keyword = userSearchKeyword.trim().toLowerCase();
+    const keyword = normalizeText(userSearchKeyword);
 
-    if (!keyword) {
-      return true;
-    }
+    const matchesKeyword =
+      !keyword ||
+      normalizeText(user.fullName).includes(keyword) ||
+      normalizeText(user.email).includes(keyword) ||
+      normalizeText(user.phone).includes(keyword) ||
+      normalizeText(user.role).includes(keyword);
 
-    return (
-      String(user.fullName || "")
-        .toLowerCase()
-        .includes(keyword) ||
-      String(user.email || "")
-        .toLowerCase()
-        .includes(keyword) ||
-      String(user.phone || "")
-        .toLowerCase()
-        .includes(keyword) ||
-      String(user.role || "")
-        .toLowerCase()
-        .includes(keyword)
-    );
+    const matchesStatus =
+      userStatusFilter === "ALL" ||
+      (userStatusFilter === "LOCKED" && Boolean(user.locked)) ||
+      (userStatusFilter === "ACTIVE" && !Boolean(user.locked));
+
+    return matchesKeyword && matchesStatus;
   });
+
+  const userTotalPages = getTotalPages(filteredUsers);
+  const paginatedUsers = paginateItems(filteredUsers, userPage);
+
+  const currentAdminMenuInfo =
+    ADMIN_MENU_INFO[activeMenu] || ADMIN_MENU_INFO.overview;
 
   return (
     <div className="admin-dashboard">
@@ -2658,11 +3073,18 @@ export default function AdminDashboard() {
       <div className="sidebar">
         {/* LOGO */}
 
-        <div className="sidebar-logo">
+        <button
+          type="button"
+          className="sidebar-logo sidebar-logo-button"
+          onClick={() => navigate("/")}
+        >
           <span className="logo-icon">⚡</span>
 
-          <span>ElectroShop</span>
-        </div>
+          <span className="sidebar-logo-text">
+            <strong>ElectroShop</strong>
+            <small>Admin Center</small>
+          </span>
+        </button>
 
         {/* MENU */}
 
@@ -2754,12 +3176,21 @@ export default function AdminDashboard() {
 
             <span>Người dùng</span>
           </button>
+        </div>
 
-          <div className="sidebar-item">
-            <span>⚙️</span>
+        <div className="sidebar-footer-pro">
+          <button
+            type="button"
+            className="sidebar-home-btn"
+            onClick={() => navigate("/")}
+          >
+            <span>🏠</span>
 
-            <span>Cài đặt</span>
-          </div>
+            <div>
+              <strong>Về trang chủ</strong>
+              <small>Xem website bán hàng</small>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -2768,12 +3199,37 @@ export default function AdminDashboard() {
       <div className="main-content">
         {/* HEADER */}
 
-        <div className="dashboard-header">
-          <h1>Trang quản trị</h1>
+        <div className="dashboard-header admin-dashboard-header-pro">
+          <div className="admin-page-title-block">
+            <span className="admin-page-eyebrow">
+              <span>{currentAdminMenuInfo.icon}</span>
+              {currentAdminMenuInfo.label}
+            </span>
 
-          <button className="logout-btn" onClick={handleLogout}>
-            Đăng xuất
-          </button>
+            <h1>{currentAdminMenuInfo.title}</h1>
+
+            <p>{currentAdminMenuInfo.description}</p>
+          </div>
+
+          <div className="admin-header-actions">
+            <button
+              type="button"
+              className="admin-homepage-btn"
+              onClick={() => navigate("/")}
+            >
+              <span>🏠</span>
+              <span>Về trang chủ</span>
+            </button>
+
+            <button
+              type="button"
+              className="logout-btn admin-logout-btn"
+              onClick={handleLogout}
+            >
+              <span>🚪</span>
+              <span>Đăng xuất</span>
+            </button>
+          </div>
         </div>
 
         {activeMenu === "overview" && (
@@ -2821,10 +3277,24 @@ export default function AdminDashboard() {
                 <input
                   type="text"
                   value={userSearchKeyword}
-                  placeholder="Tìm theo tên, email, số điện thoại..."
+                  placeholder="Tìm theo tên, email, số điện thoại."
                   onChange={(event) => setUserSearchKeyword(event.target.value)}
                 />
+
+                <select
+                  value={userStatusFilter}
+                  onChange={(event) => setUserStatusFilter(event.target.value)}
+                >
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="LOCKED">Đã khóa</option>
+                </select>
               </div>
+
+              <p className="admin-result-count">
+                Hiển thị {paginatedUsers.length} / {filteredUsers.length} người
+                dùng
+              </p>
 
               <div className="admin-user-table-wrap">
                 <table className="admin-user-table">
@@ -2841,14 +3311,14 @@ export default function AdminDashboard() {
                   </thead>
 
                   <tbody>
-                    {filteredUsers.length === 0 ? (
+                    {paginatedUsers.length === 0 ? (
                       <tr>
                         <td colSpan="7" className="admin-empty-cell">
                           Không có người dùng nào
                         </td>
                       </tr>
                     ) : (
-                      filteredUsers.map((user) => (
+                      paginatedUsers.map((user) => (
                         <tr key={user.id}>
                           <td>{user.id}</td>
 
@@ -2908,6 +3378,8 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+
+              {renderPagination(userPage, userTotalPages, setUserPage)}
             </div>
           </div>
         )}
@@ -4651,7 +5123,26 @@ export default function AdminDashboard() {
             {/* PRODUCT FORM */}
 
             <div className="product-form">
-              <h2>{editingId ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}</h2>
+              <div className="product-form-header">
+                <div>
+                  <h2>{editingId ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}</h2>
+
+                  <p>
+                    {editingId
+                      ? "Bạn đang chỉnh sửa sản phẩm. Bấm làm mới để hủy sửa và nhập sản phẩm mới."
+                      : "Nhập thông tin sản phẩm mới để thêm vào hệ thống."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="product-refresh-btn"
+                  onClick={handleRefreshProductForm}
+                  disabled={productFormRefreshing}
+                >
+                  {productFormRefreshing ? "Đang làm mới..." : "Làm mới"}
+                </button>
+              </div>
 
               <form
                 onSubmit={editingId ? handleUpdateProduct : handleAddProduct}
@@ -5326,9 +5817,84 @@ export default function AdminDashboard() {
               </form>
             </div>
             {/* PRODUCT TABLE */}
-
             <div className="product-table">
               <h2>Quản lý sản phẩm</h2>
+
+              <div className="admin-toolbar">
+                <input
+                  type="text"
+                  placeholder="Tìm theo ID, tên sản phẩm, danh mục, thương hiệu..."
+                  value={productSearchKeyword}
+                  onChange={(event) =>
+                    setProductSearchKeyword(event.target.value)
+                  }
+                />
+
+                <select
+                  value={productCategoryFilter}
+                  onChange={(event) => {
+                    setProductCategoryFilter(event.target.value);
+                    setProductBrandFilter("");
+                  }}
+                >
+                  <option value="">Tất cả danh mục</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={productBrandFilter}
+                  onChange={(event) =>
+                    setProductBrandFilter(event.target.value)
+                  }
+                >
+                  <option value="">Tất cả thương hiệu</option>
+                  {brands
+                    .filter(
+                      (brand) =>
+                        !productCategoryFilter ||
+                        brand.category === productCategoryFilter,
+                    )
+                    .map((brand) => (
+                      <option key={brand.id} value={brand.name}>
+                        {brand.name}
+                      </option>
+                    ))}
+                </select>
+
+                <select
+                  value={productStockFilter}
+                  onChange={(event) =>
+                    setProductStockFilter(event.target.value)
+                  }
+                >
+                  <option value="ALL">Tất cả tồn kho</option>
+                  <option value="IN_STOCK">Còn hàng</option>
+                  <option value="LOW_STOCK">Sắp hết hàng</option>
+                  <option value="OUT_OF_STOCK">Hết hàng</option>
+                </select>
+
+                <select
+                  value={productSortMode}
+                  onChange={(event) => setProductSortMode(event.target.value)}
+                >
+                  <option value="ID_DESC">Mới nhất trước</option>
+                  <option value="ID_ASC">Cũ nhất trước</option>
+                  <option value="NAME_ASC">Tên A-Z</option>
+                  <option value="PRICE_ASC">Giá tăng dần</option>
+                  <option value="PRICE_DESC">Giá giảm dần</option>
+                  <option value="STOCK_ASC">Tồn kho tăng dần</option>
+                  <option value="STOCK_DESC">Tồn kho giảm dần</option>
+                </select>
+              </div>
+
+              <p className="admin-result-count">
+                Hiển thị {paginatedProducts.length} / {filteredProducts.length}{" "}
+                sản phẩm
+              </p>
 
               <table>
                 <thead>
@@ -5344,24 +5910,26 @@ export default function AdminDashboard() {
                 </thead>
 
                 <tbody>
-                  {Array.isArray(products) &&
-                    products.map((product) => (
-                      <tr key={product.id}>
+                  {paginatedProducts.length > 0 ? (
+                    paginatedProducts.map((product) => (
+                      <tr
+                        key={product.id}
+                        className="admin-product-row"
+                        onClick={() => handleOpenProductDetail(product.id)}
+                      >
                         <td>{product.id}</td>
-
                         <td>{product.name}</td>
-
                         <td>{product.category}</td>
-
                         <td>{product.brand}</td>
-
-                        <td>{product.price}</td>
-
+                        <td>{formatAdminPrice(product.price)}</td>
                         <td>{product.stock}</td>
-
                         <td>
-                          <div className="admin-actions">
+                          <div
+                            className="admin-actions"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             <button
+                              type="button"
                               className="edit-btn"
                               onClick={() => handleEditProduct(product)}
                             >
@@ -5369,6 +5937,7 @@ export default function AdminDashboard() {
                             </button>
 
                             <button
+                              type="button"
                               className="delete-btn"
                               onClick={() => handleDelete(product.id)}
                             >
@@ -5377,9 +5946,21 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan="7"
+                        style={{ textAlign: "center", padding: "24px" }}
+                      >
+                        Không tìm thấy sản phẩm phù hợp
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
+
+              {renderPagination(productPage, productTotalPages, setProductPage)}
             </div>
           </>
         )}
@@ -5396,11 +5977,50 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 className="complete-btn"
-                onClick={fetchOrders}
+                onClick={handleRefreshOrders}
+                disabled={orderRefreshing}
               >
-                Làm mới
+                {orderRefreshing ? "Đang tải..." : "Làm mới"}
               </button>
             </div>
+
+            <div className="admin-toolbar">
+              <input
+                type="text"
+                placeholder="Tìm mã đơn, khách hàng, số điện thoại, email..."
+                value={orderSearchKeyword}
+                onChange={(event) => setOrderSearchKeyword(event.target.value)}
+              />
+
+              <select
+                value={orderStatusFilter}
+                onChange={(event) => setOrderStatusFilter(event.target.value)}
+              >
+                <option value="ALL">Tất cả trạng thái đơn</option>
+                {Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={paymentStatusFilter}
+                onChange={(event) => setPaymentStatusFilter(event.target.value)}
+              >
+                <option value="ALL">Tất cả thanh toán</option>
+                {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="admin-result-count">
+              Hiển thị {paginatedOrders.length} / {filteredOrders.length} đơn
+              hàng
+            </p>
 
             <table>
               <thead>
@@ -5422,9 +6042,13 @@ export default function AdminDashboard() {
               </thead>
 
               <tbody>
-                {Array.isArray(orders) && orders.length > 0 ? (
-                  orders.map((order) => (
-                    <tr key={order.id}>
+                {paginatedOrders.length > 0 ? (
+                  paginatedOrders.map((order) => (
+                    <tr
+                      key={order.id}
+                      className="admin-order-row"
+                      onClick={() => handleOpenOrderDetail(order)}
+                    >
                       <td>{order.orderCode || `#${order.id}`}</td>
 
                       <td>
@@ -5446,9 +6070,10 @@ export default function AdminDashboard() {
 
                       <td>{order.orderStatus || "Chưa cập nhật"}</td>
 
-                      <td>
+                      <td onClick={(event) => event.stopPropagation()}>
                         <select
                           value={order.orderStatus || ""}
+                          onClick={(event) => event.stopPropagation()}
                           onChange={(event) =>
                             handleUpdateStatus(order.id, event.target.value)
                           }
@@ -5489,6 +6114,241 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
+
+            {renderPagination(orderPage, orderTotalPages, setOrderPage)}
+
+            {selectedAdminOrder && (
+              <div
+                className="admin-order-modal-backdrop"
+                onClick={handleCloseOrderDetail}
+              >
+                <section
+                  className="admin-order-modal"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="admin-order-modal-header">
+                    <div>
+                      <span>Chi tiết đơn hàng</span>
+
+                      <h2>
+                        {selectedAdminOrder.orderCode ||
+                          `#${selectedAdminOrder.id}`}
+                      </h2>
+
+                      <p>
+                        Ngày tạo:{" "}
+                        {formatOrderDate(
+                          selectedAdminOrder.createdAt ||
+                            selectedAdminOrder.orderDate ||
+                            selectedAdminOrder.createdDate,
+                        )}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="admin-order-modal-close"
+                      onClick={handleCloseOrderDetail}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {orderDetailLoading ? (
+                    <div className="admin-order-loading">
+                      Đang tải chi tiết đơn hàng...
+                    </div>
+                  ) : (
+                    <>
+                      <div className="admin-order-detail-grid">
+                        <div className="admin-order-detail-card">
+                          <h3>Thông tin khách hàng</h3>
+
+                          <p>
+                            <span>Họ tên</span>
+                            <strong>
+                              {selectedAdminOrder.customerName ||
+                                "Chưa cập nhật"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            <span>Số điện thoại</span>
+                            <strong>
+                              {selectedAdminOrder.phone || "Chưa cập nhật"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            <span>Email</span>
+                            <strong>
+                              {selectedAdminOrder.email || "Chưa cập nhật"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            <span>Địa chỉ</span>
+                            <strong>
+                              {selectedAdminOrder.shippingAddress ||
+                                selectedAdminOrder.address ||
+                                "Chưa cập nhật"}
+                            </strong>
+                          </p>
+                        </div>
+
+                        <div className="admin-order-detail-card">
+                          <h3>Thanh toán & trạng thái</h3>
+
+                          <p>
+                            <span>Phương thức</span>
+                            <strong>
+                              {PAYMENT_METHOD_LABELS[
+                                selectedAdminOrder.paymentMethod
+                              ] ||
+                                selectedAdminOrder.paymentMethod ||
+                                "Chưa cập nhật"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            <span>Thanh toán</span>
+                            <strong>
+                              {PAYMENT_STATUS_LABELS[
+                                selectedAdminOrder.paymentStatus
+                              ] ||
+                                selectedAdminOrder.paymentStatus ||
+                                "Chưa cập nhật"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            <span>Trạng thái đơn</span>
+                            <strong>
+                              {ORDER_STATUS_LABELS[
+                                selectedAdminOrder.orderStatus
+                              ] ||
+                                selectedAdminOrder.orderStatus ||
+                                "Chưa cập nhật"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            <span>Ghi chú</span>
+                            <strong>
+                              {selectedAdminOrder.note || "Không có"}
+                            </strong>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="admin-order-items-box">
+                        <h3>Sản phẩm trong đơn</h3>
+
+                        {Array.isArray(selectedAdminOrder.items) &&
+                        selectedAdminOrder.items.length > 0 ? (
+                          selectedAdminOrder.items.map((item, index) => {
+                            const options = getOrderItemOptions(
+                              item.selectedOptions,
+                            );
+
+                            return (
+                              <div
+                                className="admin-order-item-row"
+                                key={item.id || index}
+                              >
+                                <img
+                                  src={
+                                    item.productImage ||
+                                    item.image ||
+                                    "/images/no-image.png"
+                                  }
+                                  alt={item.productName || "Sản phẩm"}
+                                />
+
+                                <div className="admin-order-item-info">
+                                  <strong>
+                                    {item.productName || "Sản phẩm"}
+                                  </strong>
+
+                                  {options.length > 0 && (
+                                    <div className="admin-order-item-options">
+                                      {options.map((option) => (
+                                        <span key={option.groupName}>
+                                          {option.groupName}:{" "}
+                                          {option.optionName}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  <small>Số lượng: {item.quantity || 1}</small>
+                                </div>
+
+                                <div className="admin-order-item-price">
+                                  <span>Đơn giá</span>
+                                  <strong>
+                                    {formatOrderPrice(item.unitPrice)}
+                                  </strong>
+                                </div>
+
+                                <div className="admin-order-item-price">
+                                  <span>Thành tiền</span>
+                                  <strong>
+                                    {formatOrderPrice(
+                                      item.lineTotal || item.totalPrice,
+                                    )}
+                                  </strong>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="admin-order-empty-items">
+                            Đơn hàng chưa có thông tin sản phẩm.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="admin-order-total-box">
+                        <div>
+                          <span>Tạm tính</span>
+                          <strong>
+                            {formatOrderPrice(selectedAdminOrder.subtotal)}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Phí vận chuyển</span>
+                          <strong>
+                            {formatOrderPrice(selectedAdminOrder.shippingFee)}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Giảm giá</span>
+                          <strong>
+                            -
+                            {formatOrderPrice(
+                              selectedAdminOrder.discountAmount,
+                            )}
+                          </strong>
+                        </div>
+
+                        <div className="final">
+                          <span>Tổng thanh toán</span>
+                          <strong>
+                            {formatOrderPrice(
+                              selectedAdminOrder.totalAmount ||
+                                selectedAdminOrder.totalPrice,
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </section>
+              </div>
+            )}
           </div>
         )}
 
