@@ -12,6 +12,7 @@ import {
   clearCart,
   getBuyNowItem,
   clearBuyNowItem,
+  clearSelectedCartItems,
 } from "../utils/cartUtils";
 
 import { createCheckout } from "../services/checkoutApi";
@@ -116,6 +117,24 @@ export default function CheckoutPage() {
     }
 
     const cart = getCart();
+
+    const selectedCartKeys = JSON.parse(
+      sessionStorage.getItem("selectedCheckoutCartKeys") || "[]",
+    );
+
+    if (Array.isArray(selectedCartKeys) && selectedCartKeys.length > 0) {
+      const selectedCart = cart.filter((item) => {
+        const productId = item.productId || item.id;
+        const selectedOptionsText = JSON.stringify(item.selectedOptions || {});
+        const itemKey = item.cartKey || `${productId}-${selectedOptionsText}`;
+
+        return selectedCartKeys.includes(itemKey);
+      });
+
+      setCartItems(selectedCart);
+
+      return;
+    }
 
     setCartItems(Array.isArray(cart) ? cart : []);
   }, []);
@@ -354,6 +373,11 @@ export default function CheckoutPage() {
         sessionStorage.setItem("pendingOrderCode", result.orderCode || "");
         sessionStorage.setItem("pendingCheckoutSource", checkoutSource);
 
+        sessionStorage.setItem(
+          "pendingSelectedCartKeys",
+          sessionStorage.getItem("selectedCheckoutCartKeys") || "[]",
+        );
+
         /*
          * Không xóa giỏ hàng tại đây.
          * Chỉ xóa sau khi backend xác nhận PAID.
@@ -370,7 +394,15 @@ export default function CheckoutPage() {
       if (checkoutSource === "BUY_NOW") {
         clearBuyNowItem();
       } else {
-        clearCart();
+        const selectedCartKeys = JSON.parse(
+          sessionStorage.getItem("selectedCheckoutCartKeys") || "[]",
+        );
+
+        if (Array.isArray(selectedCartKeys) && selectedCartKeys.length > 0) {
+          clearSelectedCartItems(selectedCartKeys);
+        } else {
+          clearCart();
+        }
       }
 
       navigate("/orders", {

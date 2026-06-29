@@ -7,7 +7,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
-import { clearCart, clearBuyNowItem } from "../utils/cartUtils";
+import {
+  clearCart,
+  clearBuyNowItem,
+  clearSelectedCartItems,
+} from "../utils/cartUtils";
 
 import { getVnpayPaymentStatus } from "../services/paymentApi";
 
@@ -65,12 +69,25 @@ export default function PaymentResultPage() {
           if (pendingCheckoutSource === "BUY_NOW") {
             clearBuyNowItem();
           } else {
-            clearCart();
+            const selectedCartKeys = JSON.parse(
+              sessionStorage.getItem("pendingSelectedCartKeys") || "[]",
+            );
+
+            if (
+              Array.isArray(selectedCartKeys) &&
+              selectedCartKeys.length > 0
+            ) {
+              clearSelectedCartItems(selectedCartKeys);
+            } else {
+              clearCart();
+            }
           }
 
           sessionStorage.removeItem("pendingVnpayTxnRef");
           sessionStorage.removeItem("pendingOrderCode");
           sessionStorage.removeItem("pendingCheckoutSource");
+          sessionStorage.removeItem("selectedCheckoutCartKeys");
+          sessionStorage.removeItem("pendingSelectedCartKeys");
 
           setLoading(false);
           return;

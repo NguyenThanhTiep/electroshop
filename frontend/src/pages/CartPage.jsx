@@ -1,6 +1,7 @@
 import "./CartPage.css";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -14,7 +15,11 @@ import {
 import { applyCoupon } from "../services/couponApi";
 
 export default function CartPage() {
+  const navigate = useNavigate();
+
   const [cartItems, setCartItems] = useState([]);
+
+  const [selectedCartKeys, setSelectedCartKeys] = useState([]);
 
   const [couponCode, setCouponCode] = useState("");
 
@@ -27,11 +32,26 @@ export default function CartPage() {
   }, []);
 
   const loadCart = () => {
-    setCartItems(getCart());
+    const cart = getCart();
+
+    setCartItems(cart);
+
+    setSelectedCartKeys((currentSelectedKeys) => {
+      const allKeys = cart.map((item) => getItemKey(item));
+
+      if (currentSelectedKeys.length === 0) {
+        return allKeys;
+      }
+
+      return currentSelectedKeys.filter((key) => allKeys.includes(key));
+    });
   };
 
   const getItemKey = (item) => {
-    return item.cartKey || item.id;
+    const productId = item.productId || item.id;
+    const selectedOptionsText = JSON.stringify(item.selectedOptions || {});
+
+    return item.cartKey || `${productId}-${selectedOptionsText}`;
   };
 
   const convertPriceToNumber = (price) => {
@@ -90,11 +110,18 @@ export default function CartPage() {
     resetCouponAfterCartChange();
   };
 
-  const totalQuantity = cartItems.reduce((total, item) => {
+  const selectedCartItems = cartItems.filter((item) =>
+    selectedCartKeys.includes(getItemKey(item)),
+  );
+
+  const isAllSelected =
+    cartItems.length > 0 && selectedCartKeys.length === cartItems.length;
+
+  const totalQuantity = selectedCartItems.reduce((total, item) => {
     return total + Number(item.quantity || 1);
   }, 0);
 
-  const subTotal = cartItems.reduce((total, item) => {
+  const subTotal = selectedCartItems.reduce((total, item) => {
     const price = getCartItemPrice(item);
 
     const quantity = Number(item.quantity) || 1;
@@ -181,15 +208,62 @@ export default function CartPage() {
     sessionStorage.removeItem("checkoutCouponCode");
   };
 
+  const handleToggleSelectItem = (itemKey) => {
+    setSelectedCartKeys((currentKeys) => {
+      const nextKeys = currentKeys.includes(itemKey)
+        ? currentKeys.filter((key) => key !== itemKey)
+        : [...currentKeys, itemKey];
+
+      setCouponCode("");
+      setCouponResult(null);
+      setCouponMessage(
+        "Danh sách sản phẩm thanh toán đã thay đổi. Vui lòng áp dụng lại mã giảm giá.",
+      );
+      sessionStorage.removeItem("checkoutCouponCode");
+
+      return nextKeys;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedCartKeys([]);
+    } else {
+      setSelectedCartKeys(cartItems.map((item) => getItemKey(item)));
+    }
+
+    setCouponCode("");
+    setCouponResult(null);
+    setCouponMessage(
+      "Danh sách sản phẩm thanh toán đã thay đổi. Vui lòng áp dụng lại mã giảm giá.",
+    );
+    sessionStorage.removeItem("checkoutCouponCode");
+  };
+
+  const handleOpenProductDetail = (item) => {
+    const productId = item.productId || item.id;
+
+    if (!productId) {
+      return;
+    }
+
+    navigate(`/product/${productId}`);
+  };
+
   const handleGoToCheckout = () => {
-    if (cartItems.length === 0) {
+    if (selectedCartKeys.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán");
       return;
     }
 
     sessionStorage.setItem("checkoutSource", "CART");
+    sessionStorage.setItem(
+      "selectedCheckoutCartKeys",
+      JSON.stringify(selectedCartKeys),
+    );
     sessionStorage.removeItem("buyNowItem");
 
-    window.location.href = "/checkout";
+    navigate("/checkout");
   };
 
   return (
@@ -244,7 +318,22 @@ export default function CartPage() {
                   <div>
                     <h2>Sản phẩm đã chọn</h2>
 
-                    <p>Tổng {totalQuantity} sản phẩm</p>
+                    <p>
+                      Đã chọn {totalQuantity} sản phẩm / Tổng {cartItems.length}{" "}
+                      sản phẩm
+                    </p>
+
+                    <label className="cart-select-all-row">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={handleToggleSelectAll}
+                      />
+
+                      <span className="cart-select-all-box"></span>
+
+                      <span>Chọn tất cả sản phẩm</span>
+                    </label>
                   </div>
 
                   <button type="button" className="cart-clear-note">
@@ -263,7 +352,15 @@ export default function CartPage() {
                     const itemTotal = itemPrice * itemQuantity;
 
                     return (
-                      <article className="cart-product-card" key={itemKey}>
+                      <article
+                        className={
+                          selectedCartKeys.includes(itemKey)
+                            ? "cart-product-card selected"
+                            : "cart-product-card"
+                        }
+                        key={itemKey}
+                        onClick={() => handleOpenProductDetail(item)}
+                      >
                         <div className="cart-product-image-box">
                           <img src={item.image} alt={item.name} />
                         </div>
@@ -284,13 +381,33 @@ export default function CartPage() {
                               </span>
                             </div>
 
-                            <button
-                              type="button"
-                              className="remove-product-btn"
-                              onClick={() => handleRemove(itemKey)}
+                            <div
+                              className="cart-card-actions"
+                              onClick={(event) => event.stopPropagation()}
                             >
-                              ✕
-                            </button>
+                              <button
+                                type="button"
+                                className="remove-product-btn"
+                                onClick={() => handleRemove(itemKey)}
+                              >
+                                ✕
+                              </button>
+
+                              <label
+                                className="cart-item-checkbox"
+                                aria-label="Chọn sản phẩm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCartKeys.includes(itemKey)}
+                                  onChange={() =>
+                                    handleToggleSelectItem(itemKey)
+                                  }
+                                />
+
+                                <span className="cart-checkbox-ui"></span>
+                              </label>
+                            </div>
                           </div>
 
                           {item.selectedOptions &&
@@ -328,9 +445,10 @@ export default function CartPage() {
                             <div className="quantity-stepper">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  updateQuantity(item, itemQuantity - 1)
-                                }
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  updateQuantity(item, itemQuantity - 1);
+                                }}
                               >
                                 −
                               </button>
@@ -339,9 +457,10 @@ export default function CartPage() {
 
                               <button
                                 type="button"
-                                onClick={() =>
-                                  updateQuantity(item, itemQuantity + 1)
-                                }
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  updateQuantity(item, itemQuantity + 1);
+                                }}
                               >
                                 +
                               </button>
@@ -453,8 +572,10 @@ export default function CartPage() {
                   )}
 
                   <button
+                    type="button"
                     className="checkout-main-btn"
                     onClick={handleGoToCheckout}
+                    disabled={selectedCartKeys.length === 0}
                   >
                     Tiến hành thanh toán
                   </button>

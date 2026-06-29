@@ -169,6 +169,31 @@ export const clearCart = () => {
   notifyCartUpdated();
 };
 
+export const clearSelectedCartItems = (cartKeys = []) => {
+  const selectedKeys = Array.isArray(cartKeys)
+    ? cartKeys.map((key) => String(key))
+    : [];
+
+  if (selectedKeys.length === 0) {
+    return getCart();
+  }
+
+  const updatedCart = getCart().filter((item) => {
+    const itemKey = item.cartKey || createCartItemKey(item);
+
+    return !selectedKeys.includes(String(itemKey));
+  });
+
+  saveCart(updatedCart);
+
+  sessionStorage.removeItem("selectedCheckoutCartKeys");
+  sessionStorage.removeItem("pendingSelectedCartKeys");
+
+  notifyCartUpdated();
+
+  return updatedCart;
+};
+
 export const saveBuyNowItem = (product) => {
   const buyNowProduct = {
     ...product,
