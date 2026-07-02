@@ -39,6 +39,8 @@ export default function SearchPage() {
 
   const bannerIdParam = searchParams.get("bannerId") || "";
 
+  const productIdsParam = searchParams.get("productIds") || "";
+
   const [products, setProducts] = useState([]);
 
   const [bannerInfo, setBannerInfo] = useState(null);
@@ -247,6 +249,17 @@ export default function SearchPage() {
   const searchResults = useMemo(() => {
     let result = [...products];
 
+    const selectedProductIds = productIdsParam
+      .split(",")
+      .map((id) => Number(id))
+      .filter((id) => !Number.isNaN(id));
+
+    if (selectedProductIds.length > 0) {
+      result = result.filter((product) =>
+        selectedProductIds.includes(Number(product.id)),
+      );
+    }
+
     const text = normalizeText(keyword);
 
     const category = normalizeText(categoryParam);
@@ -336,6 +349,7 @@ export default function SearchPage() {
     minPriceParam,
     maxPriceParam,
     sortParam,
+    productIdsParam,
     isPromotionPage,
     activePromotions,
   ]);
@@ -385,23 +399,34 @@ export default function SearchPage() {
 
   const getPageTitle = () => {
     if (bannerIdParam) {
-      return bannerInfo?.title || "Danh sách sản phẩm";
+      return bannerInfo?.title || "Bộ sưu tập sản phẩm nổi bật";
+    }
+
+    if (productIdsParam) {
+      return "Gợi ý nổi bật từ ElectroShop";
     }
 
     if (isPromotionPage) {
-      return "Sản phẩm đang khuyến mãi";
+      return "Ưu đãi công nghệ đang diễn ra";
     }
 
-    return `Có ${displayedProducts.length} kết quả tìm kiếm phù hợp`;
+    return `Tìm thấy ${displayedProducts.length} sản phẩm phù hợp`;
   };
 
   const getPageSubtitle = () => {
     if (bannerIdParam) {
-      return bannerInfo?.subtitle || "Danh sách sản phẩm được chọn từ banner";
+      return (
+        bannerInfo?.subtitle ||
+        "Khám phá những sản phẩm được ElectroShop chọn lọc riêng cho chương trình này."
+      );
+    }
+
+    if (productIdsParam) {
+      return "Những lựa chọn đáng chú ý được ElectroShop gợi ý riêng từ banner trang chủ.";
     }
 
     if (isPromotionPage) {
-      return "Tổng hợp các sản phẩm có ưu đãi tốt nhất tại ElectroShop";
+      return "Tổng hợp các sản phẩm đang có ưu đãi tốt nhất tại ElectroShop.";
     }
 
     return getResultDescription();

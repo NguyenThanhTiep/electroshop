@@ -5398,3 +5398,157 @@ body {
   font-size: 18px !important;
   font-weight: 950 !important;
 }
+
+/* =====================================================
+   FIX HERO TOP BANNER FINAL
+   Ảnh hiện đủ, không bị cắt chữ, lấp kín khung
+===================================================== */
+
+.homepage .hero-layout {
+  align-items: stretch !important;
+}
+
+/* Cột bên phải chứa banner */
+.homepage .hero-right {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--hero-right-gap) !important;
+  overflow: visible !important;
+}
+
+/* Khung banner full vùng bên phải */
+.homepage .hero-right .home-top-banner-card {
+  position: relative !important;
+  width: 100% !important;
+  max-width: none !important;
+
+  /* Giữ đúng tỷ lệ ảnh banner bạn đang dùng */
+  aspect-ratio: 2048 / 600 !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border-radius: 28px !important;
+  overflow: hidden !important;
+
+  background: transparent !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12) !important;
+
+  line-height: 0 !important;
+  cursor: pointer;
+}
+
+/* Ảnh phủ full khung nhưng không cắt chữ */
+.homepage .hero-right .home-top-banner-image,
+.homepage .hero-right .home-top-banner-card img {
+  position: absolute !important;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  display: block !important;
+
+  object-fit: fill !important;
+  object-position: center center !important;
+
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* Nút chuyển banner */
+.homepage .hero-right .home-top-banner-nav {
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+
+  z-index: 5 !important;
+
+  width: 44px !important;
+  height: 44px !important;
+
+  border: none !important;
+  border-radius: 999px !important;
+
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #0f172a !important;
+
+  font-size: 24px !important;
+  font-weight: 950 !important;
+
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18) !important;
+}
+
+.homepage .hero-right .home-top-banner-nav.prev {
+  left: 18px !important;
+}
+
+.homepage .hero-right .home-top-banner-nav.next {
+  right: 18px !important;
+}
+
+/* Dots */
+.homepage .hero-right .home-top-banner-dots {
+  position: absolute !important;
+  left: 50% !important;
+  bottom: 16px !important;
+  transform: translateX(-50%) !important;
+
+  z-index: 6 !important;
+
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.homepage .hero-right .home-top-banner-dot {
+  width: 9px !important;
+  height: 9px !important;
+
+  border: none !important;
+  border-radius: 999px !important;
+
+  background: rgba(255, 255, 255, 0.62) !important;
+  cursor: pointer;
+}
+
+.homepage .hero-right .home-top-banner-dot.active {
+  width: 28px !important;
+  background: #ffffff !important;
+}
+
+/* Responsive */
+@media (max-width: 1350px) {
+  .homepage .hero-right .home-top-banner-card {
+    aspect-ratio: 2048 / 600 !important;
+  }
+}
+
+@media (max-width: 1050px) {
+  .homepage .hero-right .home-top-banner-card {
+    aspect-ratio: 2048 / 600 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .homepage .hero-right .home-top-banner-card {
+    aspect-ratio: 16 / 7 !important;
+    border-radius: 20px !important;
+  }
+
+  .homepage .hero-right .home-top-banner-image,
+  .homepage .hero-right .home-top-banner-card img {
+    object-fit: fill !important;
+  }
+
+  .homepage .hero-right .home-top-banner-nav {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 18px !important;
+  }
+}

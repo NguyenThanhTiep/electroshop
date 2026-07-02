@@ -1450,6 +1450,115 @@ td {
   margin-bottom: 16px;
 }
 
+/* ---------- 05.1 CHỌN SẢN PHẨM CHO BANNER TRANG CHỦ ---------- */
+
+.banner-product-select-box {
+  padding: 16px;
+  border-radius: 18px;
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
+}
+
+.banner-product-select-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.banner-product-select-head h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.banner-product-select-head p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.homepage-card .banner-product-select-head button {
+  width: auto;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.homepage-card .banner-product-select-head button:hover {
+  background: #fecaca;
+}
+
+.banner-product-check-list {
+  max-height: 280px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.banner-product-check-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.banner-product-check-list::-webkit-scrollbar-track {
+  background: #eaf1fb;
+  border-radius: 999px;
+}
+
+.banner-product-check-list::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+}
+
+.banner-product-check-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+  color: #0f172a;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.banner-product-check-item:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+}
+
+.homepage-card .banner-product-check-item input {
+  width: 17px !important;
+  height: 17px !important;
+  min-width: 17px;
+  padding: 0 !important;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.banner-product-check-item span {
+  line-height: 1.4;
+}
 /* ==================================================
    06. DANH MỤC / THƯƠNG HIỆU
 ================================================== */

@@ -1271,6 +1271,29 @@ export default function HomePage() {
     navigate(cleanLink.startsWith("/") ? cleanLink : `/${cleanLink}`);
   };
 
+  const handleTopBannerClick = (banner) => {
+    const targetType = String(banner.targetType || "CUSTOM_LINK")
+      .trim()
+      .toUpperCase();
+
+    if (targetType === "PRODUCT") {
+      if (banner.targetProductId) {
+        navigate(`/product/${banner.targetProductId}`);
+        return;
+      }
+
+      handleHomeLinkClick(banner.targetUrl || banner.linkUrl);
+      return;
+    }
+
+    if (targetType === "COLLECTION") {
+      handleHomeLinkClick(banner.targetUrl || banner.linkUrl || "/search");
+      return;
+    }
+
+    handleHomeLinkClick(banner.targetUrl || banner.linkUrl);
+  };
+
   const handleSectionBannerClick = (banner) => {
     const targetType = String(banner.targetType || "COLLECTION")
       .trim()
@@ -1312,54 +1335,35 @@ export default function HomePage() {
 
         <div className="hero-right">
           {topBanners.length > 0 && activeBanner ? (
-            <section className="home-top-banner">
-              <div
-                className="home-top-banner-item"
-                onClick={() => {
-                  if (activeBanner.linkUrl) {
-                    handleHomeLinkClick(activeBanner.linkUrl);
-                  }
-                }}
-              >
-                <img src={activeBanner.imageUrl} alt={activeBanner.title} />
+            <section
+              className="home-top-banner-card"
+              onClick={() => handleTopBannerClick(activeBanner)}
+            >
+              <img
+                className="home-top-banner-image"
+                src={activeBanner.imageUrl}
+                alt={activeBanner.title || "ElectroShop banner"}
+              />
 
-                <div className="home-top-banner-content">
-                  <span className="banner-sale-badge">🔥 GAMING WEEK</span>
+              {(activeBanner.showTitle || activeBanner.showSubtitle) && (
+                <div className="home-top-banner-overlay">
+                  {activeBanner.showTitle && activeBanner.title && (
+                    <h1>{activeBanner.title}</h1>
+                  )}
 
-                  <h2>{activeBanner.title}</h2>
-
-                  <p>{activeBanner.subtitle}</p>
-
-                  <button>
-                    Khám phá ngay
-                    <span>→</span>
-                  </button>
-
-                  <div className="banner-benefits">
-                    <div>
-                      🚚
-                      <span>Giao nhanh 2h</span>
-                    </div>
-
-                    <div>
-                      🛡️
-                      <span>Bảo hành chính hãng</span>
-                    </div>
-
-                    <div>
-                      💳
-                      <span>Trả góp 0%</span>
-                    </div>
-                  </div>
+                  {activeBanner.showSubtitle && activeBanner.subtitle && (
+                    <p>{activeBanner.subtitle}</p>
+                  )}
                 </div>
-              </div>
+              )}
 
               {topBanners.length > 1 && (
                 <>
                   <button
-                    className="banner-nav-btn banner-prev"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    type="button"
+                    className="home-top-banner-nav prev"
+                    onClick={(event) => {
+                      event.stopPropagation();
                       handlePrevBanner();
                     }}
                   >
@@ -1367,26 +1371,28 @@ export default function HomePage() {
                   </button>
 
                   <button
-                    className="banner-nav-btn banner-next"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    type="button"
+                    className="home-top-banner-nav next"
+                    onClick={(event) => {
+                      event.stopPropagation();
                       handleNextBanner();
                     }}
                   >
                     ❯
                   </button>
 
-                  <div className="banner-dots">
+                  <div className="home-top-banner-dots">
                     {topBanners.map((banner, index) => (
                       <button
-                        key={banner.id}
+                        type="button"
+                        key={banner.id || index}
                         className={
                           index === activeBannerIndex
-                            ? "banner-dot active"
-                            : "banner-dot"
+                            ? "home-top-banner-dot active"
+                            : "home-top-banner-dot"
                         }
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={(event) => {
+                          event.stopPropagation();
                           setActiveBannerIndex(index);
                         }}
                       />

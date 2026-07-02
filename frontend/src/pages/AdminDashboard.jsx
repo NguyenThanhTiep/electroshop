@@ -246,7 +246,14 @@ export default function AdminDashboard() {
     position: "HOME_TOP",
     active: true,
     sortOrder: 1,
+    showTitle: false,
+    showSubtitle: false,
+    targetType: "COLLECTION",
+    targetUrl: "",
+    targetProductId: "",
   });
+
+  const [selectedBannerProductIds, setSelectedBannerProductIds] = useState([]);
 
   const [homeSections, setHomeSections] = useState([]);
 
@@ -1899,8 +1906,36 @@ export default function AdminDashboard() {
     });
   };
 
+  const getProductIdsFromBannerUrl = (url) => {
+    const value = String(url || "");
+
+    const match = value.match(/[?&]productIds=([^&]+)/);
+
+    if (!match) {
+      return [];
+    }
+
+    return match[1]
+      .split(",")
+      .map((id) => Number(id))
+      .filter((id) => !Number.isNaN(id));
+  };
+
+  const handleToggleBannerProduct = (productId) => {
+    const numericProductId = Number(productId);
+
+    setSelectedBannerProductIds((currentIds) => {
+      if (currentIds.includes(numericProductId)) {
+        return currentIds.filter((id) => id !== numericProductId);
+      }
+
+      return [...currentIds, numericProductId];
+    });
+  };
+
   const resetBannerForm = () => {
     setEditingBannerId(null);
+    setSelectedBannerProductIds([]);
 
     setBannerForm({
       title: "",
@@ -1910,44 +1945,94 @@ export default function AdminDashboard() {
       position: "HOME_TOP",
       active: true,
       sortOrder: 1,
+      showTitle: false,
+      showSubtitle: false,
+      targetType: "COLLECTION",
+      targetUrl: "",
+      targetProductId: "",
     });
   };
 
   const handleSaveBanner = async (e) => {
     e.preventDefault();
 
-    if (!bannerForm.title.trim()) {
-      alert("Vui lòng nhập tiêu đề banner");
-      return;
-    }
-
     if (!bannerForm.imageUrl) {
       alert("Vui lòng upload ảnh banner");
       return;
     }
 
+    if (bannerForm.showTitle && !bannerForm.title.trim()) {
+      alert("Vui lòng nhập tiêu đề banner hoặc tắt hiển thị tiêu đề");
+      return;
+    }
+
+    if (bannerForm.showSubtitle && !bannerForm.subtitle.trim()) {
+      alert("Vui lòng nhập mô tả ngắn hoặc tắt hiển thị mô tả");
+      return;
+    }
+
+    if (bannerForm.targetType === "PRODUCT" && !bannerForm.targetProductId) {
+      alert("Vui lòng chọn sản phẩm đích");
+      return;
+    }
+
+    if (
+      bannerForm.targetType === "CUSTOM_LINK" &&
+      !bannerForm.targetUrl.trim()
+    ) {
+      alert("Vui lòng nhập link tùy chỉnh");
+      return;
+    }
+
+    let resolvedTargetUrl = "/search";
+    let resolvedLinkUrl = "/search";
+
+    if (bannerForm.targetType === "COLLECTION") {
+      if (selectedBannerProductIds.length === 0) {
+        alert("Vui lòng chọn ít nhất 1 sản phẩm cho danh sách sản phẩm");
+        return;
+      }
+
+      resolvedTargetUrl = `/search?productIds=${selectedBannerProductIds.join(",")}`;
+      resolvedLinkUrl = resolvedTargetUrl;
+    }
+
+    if (bannerForm.targetType === "PRODUCT") {
+      resolvedTargetUrl = `/product/${bannerForm.targetProductId}`;
+      resolvedLinkUrl = resolvedTargetUrl;
+    }
+
+    if (bannerForm.targetType === "CUSTOM_LINK") {
+      resolvedTargetUrl = bannerForm.targetUrl.trim();
+      resolvedLinkUrl = resolvedTargetUrl;
+    }
+
     const payload = {
       ...bannerForm,
+      position: "HOME_TOP",
       sortOrder: Number(bannerForm.sortOrder) || 1,
+      targetProductId: bannerForm.targetProductId
+        ? Number(bannerForm.targetProductId)
+        : null,
+      title: bannerForm.title.trim(),
+      subtitle: bannerForm.subtitle.trim(),
+      targetUrl: resolvedTargetUrl,
+      linkUrl: resolvedLinkUrl,
     };
 
     try {
       if (editingBannerId) {
         await updateBanner(editingBannerId, payload);
-
         alert("Cập nhật banner thành công");
       } else {
         await createBanner(payload);
-
         alert("Thêm banner thành công");
       }
 
       resetBannerForm();
-
       fetchBanners();
     } catch (error) {
       console.log(error);
-
       alert("Lỗi khi lưu banner");
     }
   };
@@ -1955,14 +2040,28 @@ export default function AdminDashboard() {
   const handleEditBanner = (banner) => {
     setEditingBannerId(banner.id);
 
+    setSelectedBannerProductIds(
+      getProductIdsFromBannerUrl(banner.targetUrl || banner.linkUrl),
+    );
+
     setBannerForm({
       title: banner.title || "",
       subtitle: banner.subtitle || "",
       imageUrl: banner.imageUrl || "",
       linkUrl: banner.linkUrl || "",
-      position: banner.position || "HOME_TOP",
+      position: "HOME_TOP",
       active: banner.active === undefined ? true : banner.active,
       sortOrder: banner.sortOrder || 1,
+      showTitle: Boolean(banner.showTitle),
+      showSubtitle: Boolean(banner.showSubtitle),
+      targetType: banner.targetType || "COLLECTION",
+      targetUrl: banner.targetUrl || banner.linkUrl || "",
+      targetProductId: banner.targetProductId || "",
+    });
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
     });
   };
 
@@ -4163,6 +4262,26 @@ export default function AdminDashboard() {
                     onChange={handleBannerChange}
                   />
 
+                  <label className="homepage-check">
+                    <input
+                      type="checkbox"
+                      name="showTitle"
+                      checked={bannerForm.showTitle}
+                      onChange={handleBannerChange}
+                    />
+                    Hiển thị tiêu đề trên banner
+                  </label>
+
+                  <label className="homepage-check">
+                    <input
+                      type="checkbox"
+                      name="showSubtitle"
+                      checked={bannerForm.showSubtitle}
+                      onChange={handleBannerChange}
+                    />
+                    Hiển thị mô tả ngắn trên banner
+                  </label>
+
                   <div className="admin-upload-field">
                     <span>Ảnh banner</span>
 
@@ -4200,13 +4319,91 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  <input
-                    type="text"
-                    name="linkUrl"
-                    placeholder="Link khi bấm banner"
-                    value={bannerForm.linkUrl}
-                    onChange={handleBannerChange}
-                  />
+                  <select
+                    name="targetType"
+                    value={bannerForm.targetType}
+                    onChange={(event) => {
+                      setBannerForm({
+                        ...bannerForm,
+                        targetType: event.target.value,
+                        targetUrl: "",
+                        targetProductId: "",
+                        linkUrl: "",
+                      });
+                    }}
+                  >
+                    <option value="COLLECTION">
+                      Click ra danh sách sản phẩm
+                    </option>
+                    <option value="PRODUCT">Click ra chi tiết sản phẩm</option>
+                    <option value="CUSTOM_LINK">Link tùy chỉnh</option>
+                  </select>
+
+                  {bannerForm.targetType === "PRODUCT" && (
+                    <select
+                      name="targetProductId"
+                      value={bannerForm.targetProductId}
+                      onChange={handleBannerChange}
+                    >
+                      <option value="">Chọn sản phẩm đích</option>
+
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {bannerForm.targetType === "CUSTOM_LINK" && (
+                    <input
+                      name="targetUrl"
+                      placeholder="Nhập link tùy chỉnh. Ví dụ: /search?category=Laptop"
+                      value={bannerForm.targetUrl}
+                      onChange={handleBannerChange}
+                    />
+                  )}
+
+                  {bannerForm.targetType === "COLLECTION" && (
+                    <div className="banner-product-select-box">
+                      <div className="banner-product-select-head">
+                        <div>
+                          <h4>Sản phẩm hiển thị khi click banner</h4>
+                          <p>
+                            Đã chọn {selectedBannerProductIds.length} sản phẩm
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBannerProductIds([])}
+                        >
+                          Bỏ chọn tất cả
+                        </button>
+                      </div>
+
+                      <div className="banner-product-check-list">
+                        {products.map((product) => (
+                          <label
+                            className="banner-product-check-item"
+                            key={product.id}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedBannerProductIds.includes(
+                                Number(product.id),
+                              )}
+                              onChange={() =>
+                                handleToggleBannerProduct(product.id)
+                              }
+                            />
+
+                            <span>{product.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <select
                     name="position"
@@ -4214,16 +4411,6 @@ export default function AdminDashboard() {
                     onChange={handleBannerChange}
                   >
                     <option value="HOME_TOP">Banner ngang đầu trang</option>
-
-                    <option value="HOME_MIDDLE">Banner giữa trang</option>
-
-                    <option value="HOME_SIDE_LAPTOP">Banner dọc Laptop</option>
-
-                    <option value="HOME_SIDE_PC">Banner dọc PC</option>
-
-                    <option value="HOME_SIDE_GEAR">
-                      Banner dọc Gaming Gear
-                    </option>
                   </select>
 
                   <input
