@@ -2138,6 +2138,7 @@ export default function AdminDashboard() {
 
   const isBannerSectionType = (sectionType) => {
     return [
+      "DEAL_CARD",
       "BANNER_SLIDER_LARGE",
       "DOUBLE_BANNER_SLIDER",
       "PRODUCT_BANNER_SLIDER",
@@ -2202,25 +2203,6 @@ export default function AdminDashboard() {
       slideInterval: Number(sectionForm.slideInterval) || 4000,
     };
 
-    if (payload.sectionType === "DEAL_CARD") {
-      payload = {
-        ...payload,
-
-        category: "",
-        brand: "",
-        bannerImage: "",
-        bannerLink: "",
-        leftBannerImage: "",
-        leftBannerLink: "",
-        productRows: 1,
-        limitProduct: 1,
-
-        groupCode: "",
-        tabTitle: "",
-        tabOrder: 1,
-      };
-    }
-
     if (payload.sectionType === "GOLDEN_HOUR_DEAL") {
       payload = {
         ...payload,
@@ -2248,7 +2230,6 @@ export default function AdminDashboard() {
     if (isBannerSectionType(payload.sectionType)) {
       payload = {
         ...payload,
-
         productId: null,
         category: "",
         brand: "",
@@ -4563,41 +4544,20 @@ export default function AdminDashboard() {
                   )}
 
                   {sectionForm.sectionType === "DEAL_CARD" && (
-                    <div className="section-form-group">
-                      <p className="admin-form-hint">
-                        Dùng để tạo 3 card nhỏ nằm ngay dưới banner chính.
+                    <>
+                      <p>
+                        Dùng để tạo khối card deal dưới banner chính. Sau khi
+                        lưu khối, bấm nút "Quản lý banner" ở bảng danh sách khối
+                        để thêm ảnh card deal, chọn kiểu click, nhóm slide và
+                        thứ tự hiển thị.
                       </p>
 
-                      <select
-                        name="productId"
-                        value={sectionForm.productId}
-                        onChange={handleSectionChange}
-                      >
-                        <option value="">Chọn sản phẩm cho card deal</option>
-
-                        {products.map((product) => (
-                          <option key={product.id} value={product.id}>
-                            {product.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      <input
-                        type="text"
-                        name="badgeText"
-                        placeholder="Badge: HOT DEAL, GIẢM 20%, BÁN CHẠY..."
-                        value={sectionForm.badgeText}
-                        onChange={handleSectionChange}
-                      />
-
-                      <input
-                        type="text"
-                        name="shortDescription"
-                        placeholder="Mô tả ngắn: Intel i7 • RTX 4070 • 32GB RAM..."
-                        value={sectionForm.shortDescription}
-                        onChange={handleSectionChange}
-                      />
-                    </div>
+                      <p>
+                        Mỗi slide nên tạo 3 banner. Ví dụ: 3 ảnh đầu đặt Nhóm
+                        slide = 1, 3 ảnh tiếp theo đặt Nhóm slide = 2 để khối tự
+                        chạy.
+                      </p>
+                    </>
                   )}
 
                   {sectionForm.sectionType === "GOLDEN_HOUR_DEAL" && (

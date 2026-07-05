@@ -75,6 +75,15 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar">
+      <div className="sidebar-menu-heading">
+        <div className="sidebar-menu-heading-icon">🛍️</div>
+
+        <div>
+          <strong>Danh mục</strong>
+          <span>Sản phẩm nổi bật</span>
+        </div>
+      </div>
+
       <div className="sidebar-scroll">
         <ul>
           {categories.map((category) => {

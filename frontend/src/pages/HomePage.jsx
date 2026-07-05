@@ -99,6 +99,51 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
     return null;
   }
 
+  if (sectionType === "DEAL_CARD") {
+    const currentGroup = groupedSlides[activeIndex] || [];
+
+    return (
+      <section className="deal-section deal-banner-only-section">
+        {currentGroup.slice(0, 3).map((banner) => (
+          <div
+            key={banner.id}
+            className="deal-card deal-banner-only-card"
+            onClick={() => onBannerClick(banner)}
+          >
+            <img
+              src={banner.imageUrl}
+              alt={banner.title || "Deal banner"}
+              onError={(e) => {
+                e.currentTarget.src =
+                  "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=900&q=80";
+              }}
+            />
+          </div>
+        ))}
+
+        {totalSlides > 1 && (
+          <>
+            <button
+              type="button"
+              className="deal-banner-slider-btn left"
+              onClick={goPrev}
+            >
+              ❮
+            </button>
+
+            <button
+              type="button"
+              className="deal-banner-slider-btn right"
+              onClick={goNext}
+            >
+              ❯
+            </button>
+          </>
+        )}
+      </section>
+    );
+  }
+
   if (sectionType === "BANNER_SLIDER_LARGE") {
     const banner = activeBanners[activeIndex];
 
@@ -912,6 +957,7 @@ export default function HomePage() {
 
   const isBannerSectionType = (sectionType) => {
     return [
+      "DEAL_CARD",
       "BANNER_SLIDER_LARGE",
       "DOUBLE_BANNER_SLIDER",
       "PRODUCT_BANNER_SLIDER",
@@ -923,13 +969,16 @@ export default function HomePage() {
   };
 
   const bannerHomeSections = homeSections
-    .filter((section) => isBannerSectionType(section.sectionType))
+    .filter(
+      (section) =>
+        isBannerSectionType(section.sectionType) &&
+        section.sectionType !== "DEAL_CARD",
+    )
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
 
   const dealCardSections = homeSections
     .filter((section) => section.sectionType === "DEAL_CARD")
-    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
-    .slice(0, 3);
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
 
   const tabbedSections = homeSections
     .filter((section) => section.sectionType === "TABBED_SECTION")
@@ -1413,69 +1462,15 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* DEAL CARDS GIỮ LẠI */}
-
-          {dealCardSections.length > 0 && (
-            <div className="deal-section">
-              {dealCardSections.map((section) => {
-                const product = getProductById(section.productId);
-
-                const image =
-                  section.bannerImage ||
-                  product?.image ||
-                  "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=900&q=80";
-
-                const title =
-                  section.title || product?.name || "Sản phẩm nổi bật";
-
-                const price = product?.price
-                  ? formatPrice(product.price)
-                  : "Đang cập nhật";
-
-                return (
-                  <div className="deal-card" key={section.id}>
-                    {section.badgeText && (
-                      <div className="deal-badge">{section.badgeText}</div>
-                    )}
-
-                    <img
-                      src={image}
-                      alt={title}
-                      onError={(e) => {
-                        e.currentTarget.src =
-                          "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=900&q=80";
-                      }}
-                    />
-
-                    <div className="deal-info">
-                      <h3>{title}</h3>
-
-                      {section.shortDescription && (
-                        <p className="deal-desc">{section.shortDescription}</p>
-                      )}
-
-                      <p className="deal-price">{price}</p>
-
-                      <button
-                        onClick={() => {
-                          if (section.bannerLink) {
-                            window.location.href = section.bannerLink;
-                            return;
-                          }
-
-                          if (product?.id) {
-                            navigate(`/product/${product.id}`);
-                          }
-                        }}
-                      >
-                        Xem ngay
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {/* DEAL CARDS DƯỚI BANNER */}
+          {dealCardSections.map((section) => (
+            <HomeDynamicBannerSection
+              key={section.id}
+              section={section}
+              banners={sectionBannerMap[section.id] || []}
+              onBannerClick={handleSectionBannerClick}
+            />
+          ))}
         </div>
       </section>
 
