@@ -116,12 +116,22 @@ public class SecurityConfig {
                         .permitAll()
 
                         .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/promotions/active"
-                        )
-                        .permitAll()
+        HttpMethod.GET,
+        "/api/promotions/active"
+)
+.permitAll()
 
-                        .requestMatchers(
+/*
+ * Review summary public cho trang chủ / trang sản phẩm.
+ * Chỉ mở GET để khách xem đánh giá, không mở API ghi review.
+ */
+.requestMatchers(
+        HttpMethod.GET,
+        "/api/reviews/product/**"
+)
+.permitAll()
+
+.requestMatchers(
         HttpMethod.GET,
         "/api/flash-sales/active",
         "/api/flash-sales/active-list",

@@ -29,7 +29,7 @@ import {
   getSectionBannerDetail,
 } from "../services/homeSectionBannerApi";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   getBrands,
@@ -233,6 +233,8 @@ const getOrderItemOptions = (selectedOptions) => {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+
+  const productImageUploadRef = useRef(null);
 
   const [banners, setBanners] = useState([]);
 
@@ -798,6 +800,27 @@ export default function AdminDashboard() {
     }
   };
 
+  const getProductImageUrl = (img) => {
+    if (!img) return "";
+    return typeof img === "string" ? img : img.imageUrl || "";
+  };
+
+  const handleRemoveMainImage = () => {
+    setProduct((prevProduct) => ({
+      ...prevProduct,
+      image: "",
+    }));
+  };
+
+  const handleRemoveSubImage = (removeIndex) => {
+    setProduct((prevProduct) => ({
+      ...prevProduct,
+      images: (prevProduct.images || []).filter(
+        (_, index) => index !== removeIndex,
+      ),
+    }));
+  };
+
   const handleUploadToForm = async (event, setForm, fieldName) => {
     const file = event.target.files?.[0];
 
@@ -1308,10 +1331,12 @@ export default function AdminDashboard() {
           ],
     );
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    setTimeout(() => {
+      productImageUploadRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 0);
   };
 
   const handleUpdateProduct = async (e) => {
@@ -5423,66 +5448,83 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* ẢNH CHÍNH */}
+                  {/* ẢNH CHÍNH + ẢNH PHỤ */}
+                  <div
+                    className="product-image-upload-group"
+                    ref={productImageUploadRef}
+                  >
+                    <div className="product-image-upload-row">
+                      <div>
+                        <label className="form-label">Ảnh chính sản phẩm</label>
 
-                  <div>
-                    <label className="form-label">Ảnh chính sản phẩm</label>
-
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={handleImageUpload}
-                    />
-
-                    {product.image && (
-                      <img
-                        src={product.image}
-                        alt=""
-                        style={{
-                          width: "160px",
-                          height: "160px",
-                          objectFit: "cover",
-                          borderRadius: "12px",
-                          marginTop: "16px",
-                          border: "2px solid #ddd",
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* ẢNH PHỤ */}
-
-                  <div>
-                    <label className="form-label">Ảnh phụ sản phẩm</label>
-
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      multiple
-                      onChange={handleMultipleUpload}
-                    />
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "12px",
-                        marginTop: "16px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {product.images?.map((img, index) => (
-                        <img
-                          key={index}
-                          src={img.imageUrl}
-                          alt=""
-                          style={{
-                            width: "100px",
-                            height: "100px",
-                            objectFit: "cover",
-                            borderRadius: "12px",
-                            border: "2px solid #ddd",
-                          }}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
                         />
-                      ))}
+
+                        {product.image && (
+                          <div className="product-image-preview-list">
+                            <div className="product-image-preview-item main">
+                              <img
+                                src={product.image}
+                                alt="Ảnh chính sản phẩm"
+                              />
+
+                              <button
+                                type="button"
+                                className="remove-product-image-btn"
+                                onClick={handleRemoveMainImage}
+                                aria-label="Xóa ảnh chính"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="form-label">Ảnh phụ sản phẩm</label>
+
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleMultipleUpload}
+                        />
+
+                        {product.images?.length > 0 && (
+                          <div className="product-image-preview-list">
+                            {product.images.map((img, index) => {
+                              const imageUrl = getProductImageUrl(img);
+
+                              if (!imageUrl) return null;
+
+                              return (
+                                <div
+                                  className="product-image-preview-item"
+                                  key={img.id || imageUrl || index}
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Ảnh phụ ${index + 1}`}
+                                  />
+
+                                  <button
+                                    type="button"
+                                    className="remove-product-image-btn"
+                                    onClick={() => handleRemoveSubImage(index)}
+                                    aria-label={`Xóa ảnh phụ ${index + 1}`}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
