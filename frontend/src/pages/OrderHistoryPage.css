@@ -524,3 +524,39 @@
   font-size: 12px;
   font-weight: 700;
 }
+.order-cancel-note {
+  max-width: 360px;
+
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  padding: 10px 12px;
+
+  border-radius: 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+
+  color: #9a3412;
+
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.order-cancel-note span {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.order-cancel-note p {
+  margin: 0;
+}
+
+.history-error-message strong {
+  color: #b91c1c;
+}
+
+.history-error-message button {
+  cursor: pointer;
+}

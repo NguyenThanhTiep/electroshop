@@ -62,24 +62,71 @@ const getStatusClass = (status) => {
     .replaceAll("_", "-");
 };
 
-const canUserCancelOrder = (order) => {
+const getCancelRejectReason = (order) => {
+  const status = order?.orderStatus;
+  const paymentMethod = order?.paymentMethod;
+  const paymentStatus = order?.paymentStatus;
+
+  if (status === "CANCELLED") {
+    return "Đơn hàng này đã được hủy trước đó.";
+  }
+
+  if (status === "COMPLETED") {
+    return "Đơn hàng đã hoàn thành nên không thể hủy.";
+  }
+
+  if (status === "DELIVERED") {
+    return "Đơn hàng đã được giao nên không thể hủy.";
+  }
+
+  if (paymentMethod === "VNPAY") {
+    if (paymentStatus === "PAID") {
+      return "Đơn hàng đã thanh toán qua VNPAY nên không thể hủy trực tiếp. Vui lòng liên hệ cửa hàng để được hỗ trợ hoàn tiền.";
+    }
+
+    return "Đơn hàng thanh toán qua VNPAY không thể hủy trực tiếp trên website. Vui lòng liên hệ cửa hàng để được hỗ trợ hủy đơn.";
+  }
+
+  if (status === "CONFIRMED") {
+    return "Đơn hàng đã được cửa hàng xác nhận nên bạn không thể tự hủy.";
+  }
+
+  if (status === "PREPARING") {
+    return "Đơn hàng đang được chuẩn bị nên bạn không thể tự hủy.";
+  }
+
+  if (status === "SHIPPING") {
+    return "Đơn hàng đang được giao nên bạn không thể tự hủy.";
+  }
+
   const cancelableStatuses = ["WAITING_PAYMENT", "PENDING_CONFIRMATION"];
 
-  if (!cancelableStatuses.includes(order.orderStatus)) {
-    return false;
+  if (!cancelableStatuses.includes(status)) {
+    return "Chỉ có thể hủy đơn trước khi cửa hàng xác nhận.";
   }
 
-  /*
-   * Không cho khách tự hủy
-   * đơn VNPAY đã thanh toán.
-   */
-  if (order.paymentMethod === "VNPAY" && order.paymentStatus === "PAID") {
-    return false;
-  }
-
-  return true;
+  return "";
 };
 
+const canUserCancelOrder = (order) => {
+  return getCancelRejectReason(order) === "";
+};
+const getApiErrorMessage = (error, fallbackMessage) => {
+  const data = error.response?.data;
+
+  let message =
+    data?.detail ||
+    data?.message ||
+    data?.error ||
+    (typeof data === "string" ? data : "") ||
+    fallbackMessage;
+
+  return String(message || fallbackMessage)
+    .replace(/^409\s*CONFLICT\s*"?/i, "")
+    .replace(/^CONFLICT\s*"?/i, "")
+    .replace(/^"|"$/g, "")
+    .trim();
+};
 export default function OrderHistoryPage() {
   const location = useLocation();
 
@@ -90,6 +137,8 @@ export default function OrderHistoryPage() {
   const [loading, setLoading] = useState(true);
 
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [errorTitle, setErrorTitle] = useState("Thông báo đơn hàng");
 
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
 
@@ -132,14 +181,16 @@ export default function OrderHistoryPage() {
 
   const handleCancelOrder = async (order) => {
     if (!userId) {
-      setErrorMessage("Không tìm thấy tài khoản đăng nhập");
+      setErrorTitle("Không thể hủy đơn hàng");
+      setErrorMessage("Không tìm thấy tài khoản đăng nhập.");
       return;
     }
 
-    if (!canUserCancelOrder(order)) {
-      setErrorMessage(
-        "Đơn hàng này không còn ở trạng thái cho phép hủy. Vui lòng làm mới danh sách đơn hàng.",
-      );
+    const cancelRejectReason = getCancelRejectReason(order);
+
+    if (cancelRejectReason) {
+      setErrorTitle("Không thể hủy đơn hàng");
+      setErrorMessage(cancelRejectReason);
 
       await fetchOrders();
       return;
@@ -155,6 +206,7 @@ export default function OrderHistoryPage() {
 
     try {
       setCancellingOrderId(order.id);
+      setErrorTitle("Thông báo đơn hàng");
       setErrorMessage("");
 
       await cancelOrder(order.id);
@@ -171,32 +223,29 @@ export default function OrderHistoryPage() {
       const statusCode = error.response?.status;
 
       if (statusCode === 409) {
+        setErrorTitle("Không thể hủy đơn hàng");
         setErrorMessage(
-          error.response?.data?.detail ||
-            error.response?.data?.message ||
-            (typeof error.response?.data === "string"
-              ? error.response.data
-              : "") ||
-            "Đơn hàng đã được xử lý nên không thể hủy.",
+          getApiErrorMessage(
+            error,
+            "Đơn hàng đã được xử lý nên không thể hủy. Vui lòng liên hệ cửa hàng để được hỗ trợ.",
+          ),
         );
 
         await fetchOrders();
         return;
       }
 
+      setErrorTitle("Không thể hủy đơn hàng");
       setErrorMessage(
-        error.response?.data?.detail ||
-          error.response?.data?.message ||
-          (typeof error.response?.data === "string"
-            ? error.response.data
-            : "") ||
-          "Không thể hủy đơn hàng",
+        getApiErrorMessage(
+          error,
+          "Không thể hủy đơn hàng. Vui lòng thử lại hoặc liên hệ cửa hàng.",
+        ),
       );
     } finally {
       setCancellingOrderId(null);
     }
   };
-
   /*
    * Xóa state khỏi lịch sử trình duyệt.
    * Khi người dùng F5, thông báo sẽ
@@ -231,17 +280,15 @@ export default function OrderHistoryPage() {
   const fetchOrders = async () => {
     if (!userId) {
       setOrders([]);
-
-      setErrorMessage("Không tìm thấy tài khoản đăng nhập");
-
+      setErrorTitle("Không thể tải đơn hàng");
+      setErrorMessage("Không tìm thấy tài khoản đăng nhập.");
       setLoading(false);
-
       return;
     }
 
     try {
       setLoading(true);
-
+      setErrorTitle("Thông báo đơn hàng");
       setErrorMessage("");
 
       const data = await getOrdersByUser(userId);
@@ -250,19 +297,17 @@ export default function OrderHistoryPage() {
     } catch (error) {
       console.error("Lỗi tải đơn hàng:", error);
 
+      setErrorTitle("Không thể tải đơn hàng");
       setErrorMessage(
-        error.response?.data?.detail ||
-          error.response?.data?.message ||
-          (typeof error.response?.data === "string"
-            ? error.response.data
-            : "") ||
-          "Không thể tải lịch sử đơn hàng",
+        getApiErrorMessage(
+          error,
+          "Không thể tải lịch sử đơn hàng. Vui lòng thử lại sau.",
+        ),
       );
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <>
       <Header />
@@ -321,7 +366,7 @@ export default function OrderHistoryPage() {
 
           {errorMessage && (
             <div className="history-error-message">
-              <strong>Thông báo đơn hàng</strong>
+              <strong>{errorTitle}</strong>
 
               <p>{errorMessage}</p>
 
@@ -463,7 +508,7 @@ export default function OrderHistoryPage() {
                         </strong>
                       </div>
 
-                      {canUserCancelOrder(order) && (
+                      {canUserCancelOrder(order) ? (
                         <button
                           type="button"
                           className="order-cancel-btn"
@@ -474,6 +519,13 @@ export default function OrderHistoryPage() {
                             ? "Đang hủy..."
                             : "Hủy đơn"}
                         </button>
+                      ) : (
+                        order.orderStatus !== "CANCELLED" && (
+                          <div className="order-cancel-note">
+                            <span>ℹ️</span>
+                            <p>{getCancelRejectReason(order)}</p>
+                          </div>
+                        )
                       )}
                     </div>
                   </article>
