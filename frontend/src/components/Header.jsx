@@ -26,6 +26,8 @@ import { getProducts } from "../services/productApi";
 
 import { getCart } from "../utils/cartUtils";
 
+const SEARCH_SUGGESTION_LIMIT = 20;
+
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,6 +96,35 @@ export default function Header() {
     }
   });
 
+  const [currentRole, setCurrentRole] = useState(() => {
+    try {
+      const savedRole = localStorage.getItem("role");
+
+      if (savedRole) {
+        return savedRole;
+      }
+
+      const savedUser = localStorage.getItem("currentUser");
+      const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+
+      return parsedUser?.role || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const normalizeRole = (role) => {
+    return String(role || "")
+      .trim()
+      .toUpperCase();
+  };
+
+  const isAdminUser = ["ADMIN", "ROLE_ADMIN"].includes(
+    normalizeRole(currentRole || currentUser?.role),
+  );
+
+  const userRoleLabel = isAdminUser ? "Quản trị viên" : "Khách hàng";
+
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -113,10 +144,16 @@ export default function Header() {
     const syncCurrentUser = () => {
       try {
         const savedUser = localStorage.getItem("currentUser");
+        const parsedUser = savedUser ? JSON.parse(savedUser) : null;
 
-        setCurrentUser(savedUser ? JSON.parse(savedUser) : null);
+        setCurrentUser(parsedUser);
+
+        const savedRole = localStorage.getItem("role");
+
+        setCurrentRole(savedRole || parsedUser?.role || "");
       } catch {
         setCurrentUser(null);
+        setCurrentRole("");
       }
 
       updateCartCount();
@@ -165,6 +202,8 @@ export default function Header() {
 
   const normalizeText = (value) => {
     return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .trim();
   };
@@ -184,20 +223,25 @@ export default function Header() {
       return [];
     }
 
-    return products
-      .filter((product) => {
-        const name = normalizeText(product.name);
+    const searchTokens = text.split(/\s+/).filter(Boolean);
 
-        const category = normalizeText(product.category);
+    return products.filter((product) => {
+      const name = normalizeText(product.name);
+      const category = normalizeText(product.category);
+      const brand = normalizeText(product.brand);
 
-        const brand = normalizeText(product.brand);
+      const searchableText = `${name} ${category} ${brand}`;
 
-        return (
-          name.includes(text) || category.includes(text) || brand.includes(text)
-        );
-      })
-      .slice(0, 6);
+      return searchTokens.every((token) => searchableText.includes(token));
+    });
   }, [keyword, products]);
+
+  const visibleSearchResults = useMemo(() => {
+    return searchResults.slice(0, SEARCH_SUGGESTION_LIMIT);
+  }, [searchResults]);
+
+  const hasMoreSearchResults =
+    searchResults.length > visibleSearchResults.length;
 
   const suggestedProducts = useMemo(() => {
     return products.slice(0, 4);
@@ -211,6 +255,18 @@ export default function Header() {
     if (!text) {
       setIsSearchOpen(true);
 
+      return;
+    }
+
+    setIsSearchOpen(false);
+
+    navigate(`/search?keyword=${encodeURIComponent(text)}`);
+  };
+
+  const handleViewAllSearchResults = () => {
+    const text = keyword.trim();
+
+    if (!text) {
       return;
     }
 
@@ -233,6 +289,7 @@ export default function Header() {
     localStorage.removeItem("currentUser");
 
     setCurrentUser(null);
+    setCurrentRole("");
     setIsUserMenuOpen(false);
 
     window.dispatchEvent(new Event("authChanged"));
@@ -294,27 +351,39 @@ export default function Header() {
                   </div>
 
                   {searchResults.length > 0 ? (
-                    <div className="search-suggestion-list">
-                      {searchResults.map((product) => (
-                        <div
-                          className="search-suggestion-item"
-                          key={product.id}
-                          onClick={() => handleGoProduct(product.id)}
-                        >
-                          <img src={product.image} alt={product.name} />
+                    <>
+                      <div className="search-suggestion-list">
+                        {visibleSearchResults.map((product) => (
+                          <div
+                            className="search-suggestion-item"
+                            key={product.id}
+                            onClick={() => handleGoProduct(product.id)}
+                          >
+                            <img src={product.image} alt={product.name} />
 
-                          <div>
-                            <h4>{product.name}</h4>
+                            <div>
+                              <h4>{product.name}</h4>
 
-                            <p>{formatPrice(product.price)}</p>
+                              <p>{formatPrice(product.price)}</p>
 
-                            <span>
-                              {product.category} • {product.brand}
-                            </span>
+                              <span>
+                                {product.category} • {product.brand}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+
+                      {hasMoreSearchResults && (
+                        <button
+                          type="button"
+                          className="search-view-all-btn"
+                          onClick={handleViewAllSearchResults}
+                        >
+                          Xem tất cả {searchResults.length} sản phẩm phù hợp
+                        </button>
+                      )}
+                    </>
                   ) : (
                     <div className="search-empty-mini">
                       Không tìm thấy sản phẩm phù hợp.
@@ -395,7 +464,7 @@ export default function Header() {
                       "Tài khoản"}
                   </span>
 
-                  <small>Khách hàng</small>
+                  <small>{userRoleLabel}</small>
                 </div>
               </button>
 
@@ -414,6 +483,16 @@ export default function Header() {
                   <Link to="/orders" onClick={() => setIsUserMenuOpen(false)}>
                     Đơn hàng của tôi
                   </Link>
+
+                  {isAdminUser && (
+                    <Link
+                      to="/admin"
+                      className="header-admin-link"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      Trang quản trị
+                    </Link>
+                  )}
 
                   <button
                     type="button"

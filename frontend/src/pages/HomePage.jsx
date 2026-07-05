@@ -73,6 +73,21 @@ const patchHomePageCache = (patch) => {
   }
 };
 
+const preloadedImageUrls = new Set();
+
+const preloadImages = (imageUrls = []) => {
+  imageUrls.filter(Boolean).forEach((imageUrl) => {
+    if (preloadedImageUrls.has(imageUrl)) {
+      return;
+    }
+
+    preloadedImageUrls.add(imageUrl);
+
+    const img = new Image();
+    img.src = imageUrl;
+  });
+};
+
 function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -153,6 +168,9 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
             <img
               src={banner.imageUrl}
               alt={banner.title || "Deal banner"}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
               onError={(e) => {
                 e.currentTarget.src =
                   "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=900&q=80";
@@ -281,8 +299,8 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
             >
               <img
                 src={banner.imageUrl}
-                alt={banner.title}
-                loading="lazy"
+                alt={banner.title || section.title || "Banner"}
+                loading="eager"
                 decoding="async"
               />
 
@@ -336,8 +354,8 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
             >
               <img
                 src={banner.imageUrl}
-                alt={banner.title}
-                loading="lazy"
+                alt={banner.title || section.title || "Banner"}
+                loading="eager"
                 decoding="async"
               />
 
@@ -450,6 +468,17 @@ export default function HomePage() {
   );
 
   const sectionBannerReadyCount = Object.keys(sectionBannerMap).length;
+
+  useEffect(() => {
+    preloadImages([
+      ...(topBanners || []).map((banner) => banner.imageUrl),
+      ...(homeSections || []).map((section) => section.bannerImage),
+      ...(homeSections || []).map((section) => section.leftBannerImage),
+      ...Object.values(sectionBannerMap || {})
+        .flat()
+        .map((banner) => banner.imageUrl),
+    ]);
+  }, [topBanners, homeSections, sectionBannerMap]);
 
   const [activeTabByGroup, setActiveTabByGroup] = useState({});
 
@@ -701,6 +730,12 @@ export default function HomePage() {
         homeSections: sectionList,
       });
 
+      preloadImages([
+        ...nextTopBanners.map((banner) => banner.imageUrl),
+        ...sectionList.map((section) => section.bannerImage),
+        ...sectionList.map((section) => section.leftBannerImage),
+      ]);
+
       const bannerSections = sectionList.filter((section) =>
         isBannerSectionType(section.sectionType),
       );
@@ -725,6 +760,11 @@ export default function HomePage() {
       patchHomePageCache({
         sectionBannerMap: nextSectionBannerMap,
       });
+      preloadImages(
+        Object.values(nextSectionBannerMap)
+          .flat()
+          .map((banner) => banner.imageUrl),
+      );
     } catch (error) {
       console.log(error);
     }
@@ -1511,9 +1551,11 @@ export default function HomePage() {
   };
 
   const handleTopBannerClick = (banner) => {
-    const targetType = String(banner.targetType || "CUSTOM_LINK")
+    const targetType = String(banner.targetType || "COLLECTION")
       .trim()
       .toUpperCase();
+
+    const bannerUrl = banner.targetUrl || banner.linkUrl || "";
 
     if (targetType === "PRODUCT") {
       if (banner.targetProductId) {
@@ -1521,30 +1563,35 @@ export default function HomePage() {
         return;
       }
 
-      handleHomeLinkClick(banner.targetUrl || banner.linkUrl);
+      if (bannerUrl) {
+        handleHomeLinkClick(bannerUrl);
+      }
+
       return;
     }
 
     if (targetType === "COLLECTION") {
       /*
-       * Banner đầu trang dạng bộ sưu tập phải đi theo bannerId
-       * để SearchPage lấy đúng danh sách sản phẩm đã chọn trong admin.
+       * Banner ngang đầu trang dùng targetUrl/linkUrl.
+       * Admin đã lưu sản phẩm đã chọn dạng:
+       * /search?productIds=1,2,3
+       * Không dùng /search?bannerId=... ở đây.
        */
-      if (banner.id) {
-        navigate(`/search?bannerId=${banner.id}`);
-        return;
-      }
-
-      handleHomeLinkClick(banner.targetUrl || banner.linkUrl || "/search");
+      handleHomeLinkClick(bannerUrl || "/search");
       return;
     }
 
     if (targetType === "CUSTOM_LINK") {
-      handleHomeLinkClick(banner.targetUrl || banner.linkUrl);
+      if (bannerUrl) {
+        handleHomeLinkClick(bannerUrl);
+      }
+
       return;
     }
 
-    handleHomeLinkClick(banner.targetUrl || banner.linkUrl);
+    if (bannerUrl) {
+      handleHomeLinkClick(bannerUrl);
+    }
   };
   const handleSectionBannerClick = (banner) => {
     const targetType = String(banner.targetType || "COLLECTION")

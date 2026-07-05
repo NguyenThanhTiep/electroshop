@@ -294,6 +294,13 @@ export default function SearchPage() {
   };
 
   const searchResults = useMemo(() => {
+    const selectedProductIds = productIdsParam
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id !== "")
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
     const filterProducts = (skipCategory = false) => {
       let result = [...products];
 
@@ -302,6 +309,16 @@ export default function SearchPage() {
       const brand = normalizeText(brandParam);
       const minPrice = Number(minPriceParam) || 0;
       const maxPrice = Number(maxPriceParam) || 0;
+
+      /*
+       * Dùng cho banner ngang đầu trang.
+       * URL dạng: /search?productIds=1,2,3
+       */
+      if (productIdsParam && selectedProductIds.length > 0) {
+        result = result.filter((product) =>
+          selectedProductIds.includes(Number(product.id)),
+        );
+      }
 
       if (isPromotionPage) {
         result = result.filter((product) =>
@@ -365,11 +382,13 @@ export default function SearchPage() {
     const normalResult = filterProducts(false);
 
     /*
-     * Nếu bấm thương hiệu từ menu mà category + brand không có kết quả,
-     * tự fallback sang lọc theo brand để tránh hiện 0 sản phẩm.
+     * Chỉ fallback brand cho menu danh mục/thương hiệu.
+     * Không fallback khi đang xem bannerId hoặc productIds,
+     * tránh banner bị hiển thị sai sản phẩm.
      */
     if (
       !bannerIdParam &&
+      !productIdsParam &&
       categoryParam &&
       brandParam &&
       normalResult.length === 0
@@ -386,6 +405,8 @@ export default function SearchPage() {
     minPriceParam,
     maxPriceParam,
     sortParam,
+    bannerIdParam,
+    productIdsParam,
     isPromotionPage,
     activePromotions,
     activeFlashSale,

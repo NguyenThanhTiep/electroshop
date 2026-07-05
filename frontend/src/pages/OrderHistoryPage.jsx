@@ -133,7 +133,15 @@ export default function OrderHistoryPage() {
   const handleCancelOrder = async (order) => {
     if (!userId) {
       setErrorMessage("Không tìm thấy tài khoản đăng nhập");
+      return;
+    }
 
+    if (!canUserCancelOrder(order)) {
+      setErrorMessage(
+        "Đơn hàng này không còn ở trạng thái cho phép hủy. Vui lòng làm mới danh sách đơn hàng.",
+      );
+
+      await fetchOrders();
       return;
     }
 
@@ -147,24 +155,34 @@ export default function OrderHistoryPage() {
 
     try {
       setCancellingOrderId(order.id);
-
       setErrorMessage("");
 
-      await cancelOrder(order.id, userId);
+      await cancelOrder(order.id);
 
       setSuccessInfo({
         message: "Hủy đơn hàng thành công!",
-
         orderCode: order.orderCode || "",
       });
 
-      /*
-       * Tải lại danh sách để cập nhật
-       * trạng thái CANCELLED.
-       */
       await fetchOrders();
     } catch (error) {
       console.error("Lỗi hủy đơn hàng:", error);
+
+      const statusCode = error.response?.status;
+
+      if (statusCode === 409) {
+        setErrorMessage(
+          error.response?.data?.detail ||
+            error.response?.data?.message ||
+            (typeof error.response?.data === "string"
+              ? error.response.data
+              : "") ||
+            "Đơn hàng đã được xử lý nên không thể hủy.",
+        );
+
+        await fetchOrders();
+        return;
+      }
 
       setErrorMessage(
         error.response?.data?.detail ||
@@ -303,12 +321,12 @@ export default function OrderHistoryPage() {
 
           {errorMessage && (
             <div className="history-error-message">
-              <strong>Không thể tải đơn hàng</strong>
+              <strong>Thông báo đơn hàng</strong>
 
               <p>{errorMessage}</p>
 
               <button type="button" onClick={fetchOrders}>
-                Thử lại
+                Làm mới đơn hàng
               </button>
             </div>
           )}
@@ -448,7 +466,7 @@ export default function OrderHistoryPage() {
                       {canUserCancelOrder(order) && (
                         <button
                           type="button"
-                          className="cancel-order-btn"
+                          className="order-cancel-btn"
                           disabled={cancellingOrderId === order.id}
                           onClick={() => handleCancelOrder(order)}
                         >

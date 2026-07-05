@@ -988,3 +988,109 @@
   color: #dc2626;
   font-weight: 700;
 }
+.search-suggestion-box {
+  max-height: min(72vh, 720px);
+  overflow: hidden;
+}
+
+.search-suggestion-list {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.search-suggestion-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-suggestion-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.search-suggestion-list::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.28);
+  border-radius: 999px;
+}
+
+.search-suggestion-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.42);
+}
+
+/* Nút xem tất cả kết quả tìm kiếm */
+.search-view-all-btn {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+
+  width: calc(100% - 32px);
+  margin: 12px 16px 14px;
+  padding: 14px 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border: none;
+  border-radius: 18px;
+
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
+  color: #ffffff;
+
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.1px;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 14px 30px rgba(37, 99, 235, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+  transition: 0.22s ease;
+}
+
+.search-view-all-btn::after {
+  content: "→";
+  width: 24px;
+  height: 24px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+
+  font-size: 16px;
+  font-weight: 900;
+
+  transition: 0.22s ease;
+}
+
+.search-view-all-btn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 55%, #172554 100%);
+  box-shadow:
+    0 18px 36px rgba(37, 99, 235, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.search-view-all-btn:hover::after {
+  transform: translateX(3px);
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.search-view-all-btn:hover {
+  background: linear-gradient(135deg, #1e40af, #1d4ed8);
+  transform: translateY(-1px);
+}
+.header-admin-link {
+  color: #1d4ed8 !important;
+  font-weight: 900 !important;
+}
+.header-admin-link:hover {
+  color: #0f3aa8 !important;
+  background: rgba(37, 99, 235, 0.08);
+}
