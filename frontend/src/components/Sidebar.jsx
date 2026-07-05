@@ -161,7 +161,9 @@ export default function Sidebar() {
 
           <li
             className="sidebar-sale"
-            onClick={() => navigate("/search?sort=newest")}
+            onClick={() =>
+              navigate(`/?section=flash-sale&scroll=${Date.now()}`)
+            }
           >
             🔥 Flash Sale
           </li>

@@ -1526,13 +1526,26 @@ export default function HomePage() {
     }
 
     if (targetType === "COLLECTION") {
+      /*
+       * Banner đầu trang dạng bộ sưu tập phải đi theo bannerId
+       * để SearchPage lấy đúng danh sách sản phẩm đã chọn trong admin.
+       */
+      if (banner.id) {
+        navigate(`/search?bannerId=${banner.id}`);
+        return;
+      }
+
       handleHomeLinkClick(banner.targetUrl || banner.linkUrl || "/search");
+      return;
+    }
+
+    if (targetType === "CUSTOM_LINK") {
+      handleHomeLinkClick(banner.targetUrl || banner.linkUrl);
       return;
     }
 
     handleHomeLinkClick(banner.targetUrl || banner.linkUrl);
   };
-
   const handleSectionBannerClick = (banner) => {
     const targetType = String(banner.targetType || "COLLECTION")
       .trim()

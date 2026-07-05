@@ -368,7 +368,12 @@ export default function SearchPage() {
      * Nếu bấm thương hiệu từ menu mà category + brand không có kết quả,
      * tự fallback sang lọc theo brand để tránh hiện 0 sản phẩm.
      */
-    if (categoryParam && brandParam && normalResult.length === 0) {
+    if (
+      !bannerIdParam &&
+      categoryParam &&
+      brandParam &&
+      normalResult.length === 0
+    ) {
       return filterProducts(true);
     }
 
