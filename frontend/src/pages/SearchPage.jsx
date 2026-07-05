@@ -125,9 +125,56 @@ export default function SearchPage() {
   };
 
   const normalizeText = (value) => {
-    return String(value || "")
-      .toLowerCase()
-      .trim();
+    const text =
+      typeof value === "object" && value !== null
+        ? value.name || value.title || value.value || ""
+        : value;
+
+    return String(text || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  };
+
+  const CATEGORY_ALIASES = {
+    laptop: ["laptop", "laptop gaming", "may tinh xach tay"],
+    "may tinh bang": ["may tinh bang", "tablet", "ipad"],
+    "dien thoai": ["dien thoai", "smartphone", "phone"],
+    "tai nghe": ["tai nghe", "headphone", "earphone"],
+    "phu kien": ["phu kien", "accessory", "phu kien cong nghe"],
+    tivi: ["tivi", "tv", "television"],
+    "tu lanh": ["tu lanh", "refrigerator"],
+    "dong ho thong minh": ["dong ho thong minh", "smartwatch", "watch"],
+  };
+
+  const matchesFilterText = (productValue, filterValue, aliases = {}) => {
+    const productText = normalizeText(productValue);
+    const filterText = normalizeText(filterValue);
+
+    if (!filterText) return true;
+    if (!productText) return false;
+
+    if (
+      productText === filterText ||
+      productText.includes(filterText) ||
+      filterText.includes(productText)
+    ) {
+      return true;
+    }
+
+    const aliasList = aliases[filterText] || [];
+
+    return aliasList.some((alias) => {
+      const aliasText = normalizeText(alias);
+
+      return (
+        productText === aliasText ||
+        productText.includes(aliasText) ||
+        aliasText.includes(productText)
+      );
+    });
   };
 
   const getPromotionForProduct = (productId) => {
@@ -247,100 +294,85 @@ export default function SearchPage() {
   };
 
   const searchResults = useMemo(() => {
-    let result = [...products];
+    const filterProducts = (skipCategory = false) => {
+      let result = [...products];
 
-    const selectedProductIds = productIdsParam
-      .split(",")
-      .map((id) => Number(id))
-      .filter((id) => !Number.isNaN(id));
+      const text = normalizeText(keyword);
+      const category = normalizeText(categoryParam);
+      const brand = normalizeText(brandParam);
+      const minPrice = Number(minPriceParam) || 0;
+      const maxPrice = Number(maxPriceParam) || 0;
 
-    if (selectedProductIds.length > 0) {
-      result = result.filter((product) =>
-        selectedProductIds.includes(Number(product.id)),
-      );
-    }
-
-    const text = normalizeText(keyword);
-
-    const category = normalizeText(categoryParam);
-
-    const brand = normalizeText(brandParam);
-
-    const minPrice = Number(minPriceParam) || 0;
-
-    const maxPrice = Number(maxPriceParam) || 0;
-
-    if (isPromotionPage) {
-      result = result.filter((product) =>
-        Boolean(getPromotionForProduct(product.id)),
-      );
-    }
-
-    if (text) {
-      result = result.filter((product) => {
-        const name = normalizeText(product.name);
-
-        const productCategory = normalizeText(product.category);
-
-        const productBrand = normalizeText(product.brand);
-
-        return (
-          name.includes(text) ||
-          productCategory.includes(text) ||
-          productBrand.includes(text)
+      if (isPromotionPage) {
+        result = result.filter((product) =>
+          Boolean(getPromotionForProduct(product.id)),
         );
-      });
-    }
+      }
 
-    if (category) {
-      result = result.filter((product) => {
-        const productCategory = normalizeText(product.category);
+      if (text) {
+        result = result.filter((product) => {
+          const name = normalizeText(product.name);
+          const productCategory = normalizeText(product.category);
+          const productBrand = normalizeText(product.brand);
 
-        return (
-          productCategory === category ||
-          productCategory.includes(category) ||
-          category.includes(productCategory)
+          return (
+            name.includes(text) ||
+            productCategory.includes(text) ||
+            productBrand.includes(text)
+          );
+        });
+      }
+
+      if (category && !skipCategory) {
+        result = result.filter((product) =>
+          matchesFilterText(product.category, categoryParam, CATEGORY_ALIASES),
         );
-      });
-    }
+      }
 
-    if (brand) {
-      result = result.filter((product) => {
-        const productBrand = normalizeText(product.brand);
-
-        return (
-          productBrand === brand ||
-          productBrand.includes(brand) ||
-          brand.includes(productBrand)
+      if (brand) {
+        result = result.filter((product) =>
+          matchesFilterText(product.brand, brandParam),
         );
-      });
+      }
+
+      if (minPrice > 0) {
+        result = result.filter(
+          (product) => Number(product.price || 0) >= minPrice,
+        );
+      }
+
+      if (maxPrice > 0) {
+        result = result.filter(
+          (product) => Number(product.price || 0) <= maxPrice,
+        );
+      }
+
+      if (sortParam === "price-asc") {
+        result.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+      }
+
+      if (sortParam === "price-desc") {
+        result.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+      }
+
+      if (sortParam === "newest") {
+        result.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+      }
+
+      return result;
+    };
+
+    const normalResult = filterProducts(false);
+
+    /*
+     * Nếu bấm thương hiệu từ menu mà category + brand không có kết quả,
+     * tự fallback sang lọc theo brand để tránh hiện 0 sản phẩm.
+     */
+    if (categoryParam && brandParam && normalResult.length === 0) {
+      return filterProducts(true);
     }
 
-    if (minPrice > 0) {
-      result = result.filter(
-        (product) => Number(product.price || 0) >= minPrice,
-      );
-    }
-
-    if (maxPrice > 0) {
-      result = result.filter(
-        (product) => Number(product.price || 0) <= maxPrice,
-      );
-    }
-
-    if (sortParam === "price-asc") {
-      result.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-    }
-
-    if (sortParam === "price-desc") {
-      result.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
-    }
-
-    if (sortParam === "newest") {
-      result.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
-    }
-
-    return result;
+    return normalResult;
   }, [
     products,
     keyword,
@@ -349,9 +381,9 @@ export default function SearchPage() {
     minPriceParam,
     maxPriceParam,
     sortParam,
-    productIdsParam,
     isPromotionPage,
     activePromotions,
+    activeFlashSale,
   ]);
 
   const displayedProducts = bannerIdParam ? bannerProducts : searchResults;

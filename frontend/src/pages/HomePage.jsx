@@ -33,6 +33,46 @@ import { getActiveCoupons } from "../services/couponApi";
 
 import { saveBuyNowItem } from "../utils/cartUtils";
 
+const HOME_PAGE_CACHE_KEY = "electroshop_home_page_cache_v1";
+const HOME_PAGE_SCROLL_KEY = "electroshop_home_page_scroll_y";
+const HOME_PAGE_CACHE_TTL = 5 * 60 * 1000;
+
+const readHomePageCache = () => {
+  try {
+    const raw = sessionStorage.getItem(HOME_PAGE_CACHE_KEY);
+
+    if (!raw) return null;
+
+    const cache = JSON.parse(raw);
+
+    if (!cache?.savedAt || Date.now() - cache.savedAt > HOME_PAGE_CACHE_TTL) {
+      sessionStorage.removeItem(HOME_PAGE_CACHE_KEY);
+      return null;
+    }
+
+    return cache;
+  } catch (error) {
+    return null;
+  }
+};
+
+const patchHomePageCache = (patch) => {
+  try {
+    const oldCache = readHomePageCache() || {};
+
+    sessionStorage.setItem(
+      HOME_PAGE_CACHE_KEY,
+      JSON.stringify({
+        ...oldCache,
+        ...patch,
+        savedAt: Date.now(),
+      }),
+    );
+  } catch (error) {
+    console.log("Không thể lưu cache homepage:", error);
+  }
+};
+
 function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -161,7 +201,13 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
           className="home-large-banner-slide"
           onClick={() => onBannerClick(banner)}
         >
-          <img src={banner.imageUrl} alt={banner.title || section.title} />
+          <img
+            src={banner.imageUrl}
+            alt={banner.title || section.title}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
 
           <div className="home-banner-overlay">
             <h3>{banner.title}</h3>
@@ -233,7 +279,12 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
               className="double-banner-card"
               onClick={() => onBannerClick(banner)}
             >
-              <img src={banner.imageUrl} alt={banner.title} />
+              <img
+                src={banner.imageUrl}
+                alt={banner.title}
+                loading="lazy"
+                decoding="async"
+              />
 
               <div className="double-banner-info">
                 <h3>{banner.title}</h3>
@@ -283,7 +334,12 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
               className="product-banner-card"
               onClick={() => onBannerClick(banner)}
             >
-              <img src={banner.imageUrl} alt={banner.title} />
+              <img
+                src={banner.imageUrl}
+                alt={banner.title}
+                loading="lazy"
+                decoding="async"
+              />
 
               <div className="product-banner-info">
                 <h3>{banner.title}</h3>
@@ -327,7 +383,10 @@ export default function HomePage() {
 
   const location = useLocation();
 
-  const [products, setProducts] = useState([]);
+  const cachedHomePage = useMemo(() => readHomePageCache(), []);
+  const restoredScrollRef = useRef(false);
+
+  const [products, setProducts] = useState(cachedHomePage?.products || []);
 
   const [activeFlashSales, setActiveFlashSales] = useState([]);
 
@@ -376,13 +435,21 @@ export default function HomePage() {
     sort: "",
   });
 
-  const [topBanners, setTopBanners] = useState([]);
+  const [topBanners, setTopBanners] = useState(
+    cachedHomePage?.topBanners || [],
+  );
 
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
-  const [homeSections, setHomeSections] = useState([]);
+  const [homeSections, setHomeSections] = useState(
+    cachedHomePage?.homeSections || [],
+  );
 
-  const [sectionBannerMap, setSectionBannerMap] = useState({});
+  const [sectionBannerMap, setSectionBannerMap] = useState(
+    cachedHomePage?.sectionBannerMap || {},
+  );
+
+  const sectionBannerReadyCount = Object.keys(sectionBannerMap).length;
 
   const [activeTabByGroup, setActiveTabByGroup] = useState({});
 
@@ -404,26 +471,118 @@ export default function HomePage() {
     fetchActiveCoupons();
   }, []);
 
+  const scrollToHomeSectionById = (sectionId, attempt = 0) => {
+    const element = document.getElementById(sectionId);
+
+    if (!element) {
+      if (attempt < 50) {
+        setTimeout(() => {
+          scrollToHomeSectionById(sectionId, attempt + 1);
+        }, 50);
+      }
+
+      return;
+    }
+
+    const headerHeight =
+      document.querySelector(".main-header")?.offsetHeight || 0;
+
+    const targetTop =
+      element.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+
+    window.scrollTo({
+      top: targetTop,
+      behavior: "smooth",
+    });
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-
     const section = params.get("section");
 
     if (!section) {
       return;
     }
 
-    setTimeout(() => {
-      const element = document.getElementById(section);
+    const timer = setTimeout(() => {
+      scrollToHomeSectionById(section);
+    }, 80);
 
-      if (element) {
-        element.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
+    return () => clearTimeout(timer);
+  }, [
+    location.search,
+    homeSections.length,
+    products.length,
+    activeFlashSales.length,
+    activeCoupons.length,
+    sectionBannerReadyCount,
+  ]);
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    const saveHomeScroll = () => {
+      sessionStorage.setItem(HOME_PAGE_SCROLL_KEY, String(window.scrollY));
+    };
+
+    window.addEventListener("scroll", saveHomeScroll, { passive: true });
+    window.addEventListener("beforeunload", saveHomeScroll);
+    window.addEventListener("pagehide", saveHomeScroll);
+
+    return () => {
+      window.removeEventListener("scroll", saveHomeScroll);
+      window.removeEventListener("beforeunload", saveHomeScroll);
+      window.removeEventListener("pagehide", saveHomeScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get("section");
+
+    /*
+     * Nếu URL có ?section=... thì đoạn scroll section ở trên xử lý.
+     * Nếu không có section thì khôi phục lại đúng vị trí người dùng đang xem.
+     */
+    if (section || restoredScrollRef.current) {
+      return;
+    }
+
+    const savedScrollY = Number(
+      sessionStorage.getItem(HOME_PAGE_SCROLL_KEY) || 0,
+    );
+
+    if (!savedScrollY) {
+      return;
+    }
+
+    if (
+      products.length === 0 &&
+      topBanners.length === 0 &&
+      homeSections.length === 0
+    ) {
+      return;
+    }
+
+    restoredScrollRef.current = true;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: savedScrollY,
+          left: 0,
+          behavior: "auto",
         });
-      }
-    }, 300);
-  }, [location.search]);
+      });
+    });
+  }, [
+    location.search,
+    products.length,
+    topBanners.length,
+    homeSections.length,
+  ]);
 
   useEffect(() => {
     if (topBanners.length <= 1) {
@@ -453,31 +612,47 @@ export default function HomePage() {
 
       const productList = Array.isArray(data) ? data : [];
 
+      /*
+       * Hiển thị sản phẩm ngay sau khi lấy được danh sách.
+       * Không chờ API đánh giá nữa, nên ảnh sản phẩm hiện nhanh hơn.
+       */
+      const quickProducts = productList.map((product) => ({
+        ...product,
+        averageRating: Number(product.averageRating || 0),
+        totalReviews: Number(product.totalReviews || 0),
+      }));
+
+      setProducts(quickProducts);
+      patchHomePageCache({
+        products: quickProducts,
+      });
+
+      /*
+       * Sau đó mới tải đánh giá ở nền.
+       * Khi tải xong thì cập nhật sao/rating, ảnh không bị delay nữa.
+       */
       const productsWithRating = await Promise.all(
-        productList.map(async (product) => {
+        quickProducts.map(async (product) => {
           try {
             const summary = await getReviewSummary(product.id);
 
             return {
               ...product,
-
               averageRating: Number(summary?.averageRating || 0),
-
               totalReviews: Number(summary?.totalReviews || 0),
             };
           } catch (error) {
             console.log("Không thể tải đánh giá sản phẩm:", product.id, error);
 
-            return {
-              ...product,
-              averageRating: 0,
-              totalReviews: 0,
-            };
+            return product;
           }
         }),
       );
 
       setProducts(productsWithRating);
+      patchHomePageCache({
+        products: productsWithRating,
+      });
     } catch (error) {
       console.log(error);
       setProducts([]);
@@ -506,15 +681,25 @@ export default function HomePage() {
 
   const fetchHomepageData = async () => {
     try {
-      const bannerData = await getBannersByPosition("HOME_TOP");
+      /*
+       * Tải banner chính và danh sách khối song song.
+       * Trước đây đang await lần lượt nên bị chậm hơn.
+       */
+      const [bannerData, sectionData] = await Promise.all([
+        getBannersByPosition("HOME_TOP"),
+        getActiveHomeSections(),
+      ]);
 
-      setTopBanners(Array.isArray(bannerData) ? bannerData : []);
-
-      const sectionData = await getActiveHomeSections();
-
+      const nextTopBanners = Array.isArray(bannerData) ? bannerData : [];
       const sectionList = Array.isArray(sectionData) ? sectionData : [];
 
+      setTopBanners(nextTopBanners);
       setHomeSections(sectionList);
+
+      patchHomePageCache({
+        topBanners: nextTopBanners,
+        homeSections: sectionList,
+      });
 
       const bannerSections = sectionList.filter((section) =>
         isBannerSectionType(section.sectionType),
@@ -528,13 +713,18 @@ export default function HomePage() {
             return [section.id, Array.isArray(banners) ? banners : []];
           } catch (error) {
             console.log(error);
-
             return [section.id, []];
           }
         }),
       );
 
-      setSectionBannerMap(Object.fromEntries(bannerEntries));
+      const nextSectionBannerMap = Object.fromEntries(bannerEntries);
+
+      setSectionBannerMap(nextSectionBannerMap);
+
+      patchHomePageCache({
+        sectionBannerMap: nextSectionBannerMap,
+      });
     } catch (error) {
       console.log(error);
     }
@@ -1612,7 +1802,11 @@ export default function HomePage() {
           return (
             <section
               key={item.key}
-              id={`flash-sale-${activeFlashSale.id}`}
+              id={
+                item.key === flashSaleRenderItems[0]?.key
+                  ? "flash-sale"
+                  : `flash-sale-${activeFlashSale.id}`
+              }
               className="golden-hour-pro-section flash-bg-full"
               style={{
                 backgroundImage: `

@@ -1,6 +1,6 @@
 import "./Header.css";
 
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import {
   MapPin,
@@ -28,19 +28,46 @@ import { getCart } from "../utils/cartUtils";
 
 export default function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const scrollToSectionById = (sectionId, attempt = 0) => {
+    const element = document.getElementById(sectionId);
+
+    if (!element) {
+      if (attempt < 40) {
+        setTimeout(() => {
+          scrollToSectionById(sectionId, attempt + 1);
+        }, 50);
+      }
+
+      return;
+    }
+
+    const headerHeight =
+      document.querySelector(".main-header")?.offsetHeight || 0;
+
+    const targetTop =
+      element.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+
+    window.scrollTo({
+      top: targetTop,
+      behavior: "smooth",
+    });
+  };
 
   const scrollToHomeSection = (sectionId) => {
-    navigate(`/?section=${sectionId}`);
+    const targetUrl = `/?section=${sectionId}&scroll=${Date.now()}`;
 
-    setTimeout(() => {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    }, 300);
+    if (location.pathname !== "/") {
+      navigate(targetUrl);
+      return;
+    }
+
+    window.history.replaceState(null, "", targetUrl);
+
+    requestAnimationFrame(() => {
+      scrollToSectionById(sectionId);
+    });
   };
 
   const searchRef = useRef(null);
