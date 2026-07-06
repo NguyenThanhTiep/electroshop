@@ -516,9 +516,68 @@ export default function ProductDetail() {
     alert("Đã thêm vào giỏ hàng");
   };
 
+  const getCategoryLink = () => {
+    if (!product.category) {
+      return "/search";
+    }
+
+    return `/search?category=${encodeURIComponent(product.category)}`;
+  };
+
+  const getBrandLink = () => {
+    const params = new URLSearchParams();
+
+    if (product.category) {
+      params.set("category", product.category);
+    }
+
+    if (product.brand) {
+      params.set("brand", product.brand);
+    }
+
+    const queryString = params.toString();
+
+    return queryString ? `/search?${queryString}` : "/search";
+  };
+
   return (
     <>
       <Header />
+
+      <div className="product-detail-breadcrumb-wrap">
+        <nav className="product-detail-breadcrumb" aria-label="breadcrumb">
+          <Link to="/" className="product-detail-breadcrumb-home">
+            <span>⌂</span>
+            Trang chủ
+          </Link>
+
+          {product.category && (
+            <>
+              <span className="product-detail-breadcrumb-separator">/</span>
+
+              <Link to={getCategoryLink()}>{product.category}</Link>
+            </>
+          )}
+
+          {product.brand && (
+            <>
+              <span className="product-detail-breadcrumb-separator">/</span>
+
+              <Link to={getBrandLink()}>{product.brand}</Link>
+            </>
+          )}
+
+          {product.name && (
+            <>
+              <span className="product-detail-breadcrumb-separator">/</span>
+
+              <span className="product-detail-breadcrumb-current">
+                {product.name}
+              </span>
+            </>
+          )}
+        </nav>
+      </div>
 
       <div className="product-detail-page">
         <div className="product-detail-container" ref={detailContainerRef}>
@@ -595,8 +654,6 @@ export default function ProductDetail() {
           {/* CENTER INFO */}
 
           <div className="product-detail-info" ref={detailInfoRef}>
-            <span className="product-category">{product.category}</span>
-
             <h1>{product.name}</h1>
 
             <div className="product-brand-row">

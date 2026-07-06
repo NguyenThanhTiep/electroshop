@@ -22,14 +22,108 @@
   --es-border-soft: #e5edf8;
   --es-white: #ffffff;
 }
+/* ===== FONT CHUNG TRANG CHI TIẾT SẢN PHẨM ===== */
 
+.product-detail-page,
+.product-detail-page *,
+.product-detail-breadcrumb-wrap,
+.product-detail-breadcrumb,
+.product-detail-breadcrumb * {
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+}
 /* =========================
    PAGE LAYOUT
 ========================= */
+/* ===== BREADCRUMB TRANG CHI TIẾT SẢN PHẨM ===== */
 
+.product-detail-breadcrumb-wrap {
+  max-width: 1540px;
+  margin: 18px auto 0;
+  padding: 0 40px;
+}
+
+.product-detail-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  padding: 10px 14px;
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(219, 234, 254, 0.9);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+
+  color: #0f172a;
+
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.product-detail-breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  color: #0f172a;
+  text-decoration: none;
+
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1.35;
+
+  transition: 0.2s ease;
+}
+
+.product-detail-breadcrumb a:hover {
+  color: #0b57d0;
+}
+
+.product-detail-breadcrumb-home span {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  background: #eef4ff;
+  color: #0b57d0;
+
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12);
+}
+
+.product-detail-breadcrumb-separator {
+  color: #64748b;
+  font-weight: 900;
+}
+
+.product-detail-breadcrumb-current {
+  max-width: 760px;
+
+  color: #475569;
+
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.35;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .product-detail-page {
   min-height: 100vh;
-  padding: 60px 40px;
+  padding: 14px 40px 60px;
+
   background: linear-gradient(135deg, #f3f7ff 0%, #f8fafc 45%, #eef4ff 100%);
   color: var(--es-dark);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
@@ -204,7 +298,7 @@
 .product-detail-info {
   height: calc(100vh - 140px);
   max-height: calc(100vh - 140px);
-  padding-top: 14px;
+  padding-top: 0;
   padding-right: 0;
   display: flex;
   flex-direction: column;
@@ -220,26 +314,13 @@
   display: none;
 }
 
-.product-category {
-  width: fit-content;
-  margin-bottom: 20px;
-  padding: 8px 18px;
-  background: var(--es-blue-soft);
-  color: var(--es-blue);
-  border: 1px solid var(--es-blue-soft-2);
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 850;
-  letter-spacing: 0.1px;
-}
-
 .product-detail-info h1 {
-  margin: 0 0 22px;
-  color: var(--es-dark);
-  font-size: 46px;
-  line-height: 1.15;
-  font-weight: 950;
-  letter-spacing: -1px;
+  margin: 0 0 14px;
+  color: #111827;
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.2px;
 }
 
 .product-brand-row {
@@ -1183,7 +1264,7 @@
 
 @media (max-width: 768px) {
   .product-detail-page {
-    padding: 30px 14px;
+    padding: 18px 14px 30px;
   }
 
   .product-detail-container {
@@ -1259,4 +1340,38 @@
   .slider-btn.right {
     right: -8px;
   }
+}
+/* Đồng bộ độ dày chữ trong trang chi tiết */
+
+.product-detail-info h1,
+.product-detail-title,
+.product-title {
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+}
+
+.product-detail-info,
+.product-detail-info p,
+.product-detail-info span,
+.product-detail-info strong,
+.product-detail-info button,
+.product-detail-info label,
+.product-detail-info small {
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.product-detail-price,
+.product-price,
+.product-current-price {
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+}
+
+.product-policy-card,
+.product-policy-card *,
+.product-suggest-box,
+.product-suggest-box * {
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
 }

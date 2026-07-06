@@ -859,14 +859,26 @@ body {
 
 .deal-banner-only-card {
   cursor: pointer;
+
+  /* Giữ đúng tỷ lệ ảnh 606 x 476 để không bị cắt chữ/hình */
+  height: auto !important;
+  aspect-ratio: 606 / 476;
+
+  border-radius: 20px;
+  overflow: hidden;
+  background: #07142f;
 }
 
 .deal-banner-only-card img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+
+  /* Không cắt ảnh */
+  object-fit: contain;
   object-position: center;
+
   display: block;
+  background: #07142f;
 }
 
 .deal-banner-slider-btn {
@@ -904,7 +916,8 @@ body {
   }
 
   .deal-banner-only-card {
-    height: 220px;
+    height: auto !important;
+    aspect-ratio: 606 / 476;
   }
 }
 /* =========================
