@@ -257,11 +257,45 @@ export default function AdminDashboard() {
 
   const [selectedBannerProductIds, setSelectedBannerProductIds] = useState([]);
 
+  const [homeBannerSearchKeyword, setHomeBannerSearchKeyword] = useState("");
+  const [homeBannerStatusFilter, setHomeBannerStatusFilter] = useState("ALL");
+  const [homeBannerTargetFilter, setHomeBannerTargetFilter] = useState("ALL");
+  const [homeBannerSortMode, setHomeBannerSortMode] = useState("NEWEST");
+  const [homeBannerPage, setHomeBannerPage] = useState(1);
+
+  const [homeBannerProductKeyword, setHomeBannerProductKeyword] = useState("");
+  const [homeBannerProductCategory, setHomeBannerProductCategory] =
+    useState("ALL");
+  const [homeBannerProductBrand, setHomeBannerProductBrand] = useState("ALL");
+
   const [homeSections, setHomeSections] = useState([]);
+
+  const [homeSectionSearchKeyword, setHomeSectionSearchKeyword] = useState("");
+  const [homeSectionTypeFilter, setHomeSectionTypeFilter] = useState("ALL");
+  const [homeSectionStatusFilter, setHomeSectionStatusFilter] = useState("ALL");
+  const [homeSectionSortMode, setHomeSectionSortMode] = useState("SORT_ASC");
+  const [homeSectionPage, setHomeSectionPage] = useState(1);
 
   const [selectedBannerSectionId, setSelectedBannerSectionId] = useState("");
 
   const [sectionBanners, setSectionBanners] = useState([]);
+
+  const [sectionBannerSearchKeyword, setSectionBannerSearchKeyword] =
+    useState("");
+  const [sectionBannerTargetFilter, setSectionBannerTargetFilter] =
+    useState("ALL");
+  const [sectionBannerStatusFilter, setSectionBannerStatusFilter] =
+    useState("ALL");
+  const [sectionBannerSortMode, setSectionBannerSortMode] =
+    useState("SORT_ASC");
+  const [sectionBannerPage, setSectionBannerPage] = useState(1);
+
+  const [sectionBannerProductKeyword, setSectionBannerProductKeyword] =
+    useState("");
+  const [sectionBannerProductCategory, setSectionBannerProductCategory] =
+    useState("ALL");
+  const [sectionBannerProductBrand, setSectionBannerProductBrand] =
+    useState("ALL");
 
   const [editingSectionBannerId, setEditingSectionBannerId] = useState(null);
 
@@ -354,6 +388,42 @@ export default function AdminDashboard() {
   const [userPage, setUserPage] = useState(1);
 
   const [promotionSubTab, setPromotionSubTab] = useState("product-discount");
+
+  const [promotionSearchKeyword, setPromotionSearchKeyword] = useState("");
+  const [promotionStatusFilter, setPromotionStatusFilter] = useState("ALL");
+  const [promotionProductFilter, setPromotionProductFilter] = useState("ALL");
+  const [promotionSortMode, setPromotionSortMode] = useState("NEWEST");
+  const [promotionPage, setPromotionPage] = useState(1);
+  const [promotionProductKeyword, setPromotionProductKeyword] = useState("");
+  const [promotionProductCategory, setPromotionProductCategory] =
+    useState("ALL");
+  const [promotionProductBrand, setPromotionProductBrand] = useState("ALL");
+  const [selectedPromotionProductIds, setSelectedPromotionProductIds] =
+    useState([]);
+
+  const [couponSearchKeyword, setCouponSearchKeyword] = useState("");
+  const [couponStatusFilter, setCouponStatusFilter] = useState("ALL");
+  const [couponTypeFilter, setCouponTypeFilter] = useState("ALL");
+  const [couponSortMode, setCouponSortMode] = useState("NEWEST");
+  const [couponPage, setCouponPage] = useState(1);
+
+  const [flashSaleSearchKeyword, setFlashSaleSearchKeyword] = useState("");
+  const [flashSaleStatusFilter, setFlashSaleStatusFilter] = useState("ALL");
+  const [flashSaleSortMode, setFlashSaleSortMode] = useState("NEWEST");
+  const [flashSalePage, setFlashSalePage] = useState(1);
+
+  const [flashSaleItemSearchKeyword, setFlashSaleItemSearchKeyword] =
+    useState("");
+  const [flashSaleItemStatusFilter, setFlashSaleItemStatusFilter] =
+    useState("ALL");
+  const [flashSaleItemPage, setFlashSaleItemPage] = useState(1);
+
+  const [flashSaleProductKeyword, setFlashSaleProductKeyword] = useState("");
+  const [flashSaleProductCategory, setFlashSaleProductCategory] =
+    useState("ALL");
+  const [flashSaleProductBrand, setFlashSaleProductBrand] = useState("ALL");
+  const [selectedFlashSaleProductIds, setSelectedFlashSaleProductIds] =
+    useState([]);
 
   const [discountPromotions, setDiscountPromotions] = useState([]);
 
@@ -574,12 +644,70 @@ export default function AdminDashboard() {
   ]);
 
   useEffect(() => {
+    setHomeBannerPage(1);
+  }, [
+    homeBannerSearchKeyword,
+    homeBannerStatusFilter,
+    homeBannerTargetFilter,
+    homeBannerSortMode,
+  ]);
+
+  useEffect(() => {
+    setHomeSectionPage(1);
+  }, [
+    homeSectionSearchKeyword,
+    homeSectionTypeFilter,
+    homeSectionStatusFilter,
+    homeSectionSortMode,
+  ]);
+
+  useEffect(() => {
+    setSectionBannerPage(1);
+  }, [
+    sectionBannerSearchKeyword,
+    sectionBannerTargetFilter,
+    sectionBannerStatusFilter,
+    sectionBannerSortMode,
+    selectedBannerSectionId,
+  ]);
+
+  useEffect(() => {
     setOrderPage(1);
   }, [orderSearchKeyword, orderStatusFilter, paymentStatusFilter]);
 
   useEffect(() => {
     setUserPage(1);
   }, [userSearchKeyword, userStatusFilter]);
+
+  useEffect(() => {
+    setPromotionPage(1);
+  }, [
+    promotionSearchKeyword,
+    promotionStatusFilter,
+    promotionProductFilter,
+    promotionSortMode,
+  ]);
+
+  useEffect(() => {
+    setCouponPage(1);
+  }, [
+    couponSearchKeyword,
+    couponStatusFilter,
+    couponTypeFilter,
+    couponSortMode,
+  ]);
+
+  useEffect(() => {
+    setFlashSalePage(1);
+  }, [flashSaleSearchKeyword, flashSaleStatusFilter, flashSaleSortMode]);
+
+  useEffect(() => {
+    setFlashSaleItemPage(1);
+  }, [
+    flashSaleItemSearchKeyword,
+    flashSaleItemStatusFilter,
+    selectedFlashSaleId,
+  ]);
 
   const fetchBrands = async () => {
     try {
@@ -1445,7 +1573,6 @@ export default function AdminDashboard() {
 
   const validatePromotionForm = () => {
     const title = promotionForm.title.trim();
-    const productId = Number(promotionForm.productId);
     const discountPercent = Number(promotionForm.discountPercent);
 
     if (!title) {
@@ -1453,17 +1580,23 @@ export default function AdminDashboard() {
       return false;
     }
 
-    if (!productId) {
-      alert("Vui lòng chọn sản phẩm");
+    if (selectedPromotionProductIds.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 sản phẩm áp dụng khuyến mãi");
       return false;
     }
 
-    const productExists = products.some(
-      (item) => Number(item.id) === productId,
+    if (editingPromotionId && selectedPromotionProductIds.length !== 1) {
+      alert("Khi sửa khuyến mãi, vui lòng chỉ chọn 1 sản phẩm");
+      return false;
+    }
+
+    const invalidProduct = selectedPromotionProductIds.some(
+      (productId) =>
+        !products.some((product) => Number(product.id) === Number(productId)),
     );
 
-    if (!productExists) {
-      alert("Sản phẩm áp dụng khuyến mãi không tồn tại trong danh sách");
+    if (invalidProduct) {
+      alert("Có sản phẩm không tồn tại trong danh sách");
       return false;
     }
 
@@ -1509,6 +1642,10 @@ export default function AdminDashboard() {
     });
 
     setEditingPromotionId(null);
+    setSelectedPromotionProductIds([]);
+    setPromotionProductKeyword("");
+    setPromotionProductCategory("ALL");
+    setPromotionProductBrand("ALL");
   };
 
   const handleSavePromotion = async (e) => {
@@ -1518,9 +1655,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    const payload = {
+    const payloadBase = {
       title: promotionForm.title.trim(),
-      productId: Number(promotionForm.productId),
       discountPercent: Number(promotionForm.discountPercent),
       startDate: promotionForm.startDate || null,
       endDate: promotionForm.endDate || null,
@@ -1529,11 +1665,25 @@ export default function AdminDashboard() {
 
     try {
       if (editingPromotionId) {
-        await updatePromotion(editingPromotionId, payload);
+        await updatePromotion(editingPromotionId, {
+          ...payloadBase,
+          productId: Number(selectedPromotionProductIds[0]),
+        });
+
         alert("Cập nhật khuyến mãi thành công");
       } else {
-        await createPromotion(payload);
-        alert("Thêm khuyến mãi thành công");
+        await Promise.all(
+          selectedPromotionProductIds.map((productId) =>
+            createPromotion({
+              ...payloadBase,
+              productId: Number(productId),
+            }),
+          ),
+        );
+
+        alert(
+          `Thêm khuyến mãi cho ${selectedPromotionProductIds.length} sản phẩm thành công`,
+        );
       }
 
       await fetchPromotions();
@@ -1567,6 +1717,9 @@ export default function AdminDashboard() {
       endDate: promotion.endDate || "",
       active: promotion.active ?? true,
     });
+    setSelectedPromotionProductIds(
+      promotion.productId ? [Number(promotion.productId)] : [],
+    );
 
     setPromotionSubTab("product-discount");
 
@@ -2402,6 +2555,28 @@ export default function AdminDashboard() {
     });
   };
 
+  const toggleAllSectionBannerVisibleProducts = () => {
+    const visibleIds = sectionBannerPickerProducts.map((product) =>
+      Number(product.id),
+    );
+
+    const isAllSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => sectionBannerProductIds.includes(id));
+
+    if (isAllSelected) {
+      setSectionBannerProductIds((currentIds) =>
+        currentIds.filter((id) => !visibleIds.includes(id)),
+      );
+
+      return;
+    }
+
+    setSectionBannerProductIds((currentIds) =>
+      Array.from(new Set([...currentIds, ...visibleIds])),
+    );
+  };
+
   const handleSaveSectionBanner = async (e) => {
     e.preventDefault();
 
@@ -2579,48 +2754,24 @@ export default function AdminDashboard() {
   };
 
   const validateFlashSaleItemForm = () => {
-    const productId = Number(flashSaleItemForm.productId);
-    const salePrice = Number(flashSaleItemForm.salePrice);
-    const discountPercent = Number(flashSaleItemForm.discountPercent);
-    const saleQuantity = Number(flashSaleItemForm.saleQuantity);
-    const soldQuantity = Number(flashSaleItemForm.soldQuantity || 0);
-    const limitPerUser = Number(flashSaleItemForm.limitPerUser || 1);
-
     if (!selectedFlashSaleId) {
       alert("Vui lòng chọn chiến dịch Flash Sale trước");
       return false;
     }
 
-    if (!productId) {
-      alert("Vui lòng chọn sản phẩm");
+    const selectedIds = editingFlashSaleItemId
+      ? [Number(flashSaleItemForm.productId || selectedFlashSaleProductIds[0])]
+      : selectedFlashSaleProductIds;
+
+    if (selectedIds.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 sản phẩm Flash Sale");
       return false;
     }
 
-    const selectedProduct = products.find(
-      (item) => Number(item.id) === productId,
-    );
-
-    if (!selectedProduct) {
-      alert("Sản phẩm Flash Sale không tồn tại trong danh sách");
-      return false;
-    }
-
-    const originalPrice = Number(selectedProduct.price || 0);
-
-    if (!originalPrice || originalPrice <= 0) {
-      alert("Giá gốc sản phẩm không hợp lệ");
-      return false;
-    }
-
-    if (!salePrice || salePrice <= 0) {
-      alert("Giá Flash Sale phải lớn hơn 0");
-      return false;
-    }
-
-    if (salePrice >= originalPrice) {
-      alert("Giá Flash Sale phải nhỏ hơn giá gốc sản phẩm");
-      return false;
-    }
+    const discountPercent = Number(flashSaleItemForm.discountPercent);
+    const saleQuantity = Number(flashSaleItemForm.saleQuantity);
+    const soldQuantity = Number(flashSaleItemForm.soldQuantity || 0);
+    const limitPerUser = Number(flashSaleItemForm.limitPerUser || 1);
 
     if (!discountPercent || discountPercent <= 0) {
       alert("Phần trăm giảm giá phải lớn hơn 0");
@@ -2657,15 +2808,33 @@ export default function AdminDashboard() {
       return false;
     }
 
-    const duplicatedItem = flashSaleItems.some(
-      (item) =>
-        Number(item.productId) === productId &&
-        Number(item.id) !== Number(editingFlashSaleItemId),
-    );
+    for (const productId of selectedIds) {
+      const selectedProduct = products.find(
+        (item) => Number(item.id) === Number(productId),
+      );
 
-    if (duplicatedItem) {
-      alert("Sản phẩm này đã có trong chiến dịch Flash Sale");
-      return false;
+      if (!selectedProduct) {
+        alert("Có sản phẩm Flash Sale không tồn tại trong danh sách");
+        return false;
+      }
+
+      const originalPrice = Number(selectedProduct.price || 0);
+
+      if (!originalPrice || originalPrice <= 0) {
+        alert(`Giá gốc của sản phẩm "${selectedProduct.name}" không hợp lệ`);
+        return false;
+      }
+    }
+
+    if (!editingFlashSaleItemId) {
+      const duplicatedItem = flashSaleItems.some((item) =>
+        selectedIds.includes(Number(item.productId)),
+      );
+
+      if (duplicatedItem) {
+        alert("Một số sản phẩm đã có trong chiến dịch Flash Sale");
+        return false;
+      }
     }
 
     return true;
@@ -2832,6 +3001,10 @@ export default function AdminDashboard() {
     });
 
     setEditingFlashSaleItemId(null);
+    setSelectedFlashSaleProductIds([]);
+    setFlashSaleProductKeyword("");
+    setFlashSaleProductCategory("ALL");
+    setFlashSaleProductBrand("ALL");
   };
 
   const handleProductForFlashSaleChange = (e) => {
@@ -2864,10 +3037,10 @@ export default function AdminDashboard() {
       return;
     }
 
-    const payload = {
-      productId: Number(flashSaleItemForm.productId),
-      salePrice: Number(flashSaleItemForm.salePrice),
-      discountPercent: Number(flashSaleItemForm.discountPercent) || 0,
+    const discountPercent = Number(flashSaleItemForm.discountPercent) || 0;
+
+    const payloadBase = {
+      discountPercent,
       saleQuantity: Number(flashSaleItemForm.saleQuantity),
       soldQuantity: Number(flashSaleItemForm.soldQuantity || 0),
       limitPerUser: Number(flashSaleItemForm.limitPerUser || 1),
@@ -2876,11 +3049,51 @@ export default function AdminDashboard() {
 
     try {
       if (editingFlashSaleItemId) {
-        await updateFlashSaleItem(editingFlashSaleItemId, payload);
+        const productId = Number(
+          flashSaleItemForm.productId || selectedFlashSaleProductIds[0],
+        );
+
+        const selectedProduct = products.find(
+          (item) => Number(item.id) === Number(productId),
+        );
+
+        const originalPrice = Number(selectedProduct?.price || 0);
+
+        const salePrice =
+          Number(flashSaleItemForm.salePrice) ||
+          Math.round((originalPrice * (100 - discountPercent)) / 100);
+
+        await updateFlashSaleItem(editingFlashSaleItemId, {
+          ...payloadBase,
+          productId,
+          salePrice,
+        });
+
         alert("Cập nhật sản phẩm Flash Sale thành công");
       } else {
-        await addFlashSaleItem(selectedFlashSaleId, payload);
-        alert("Thêm sản phẩm vào Flash Sale thành công");
+        await Promise.all(
+          selectedFlashSaleProductIds.map((productId) => {
+            const selectedProduct = products.find(
+              (item) => Number(item.id) === Number(productId),
+            );
+
+            const originalPrice = Number(selectedProduct?.price || 0);
+
+            const salePrice = Math.round(
+              (originalPrice * (100 - discountPercent)) / 100,
+            );
+
+            return addFlashSaleItem(selectedFlashSaleId, {
+              ...payloadBase,
+              productId: Number(productId),
+              salePrice,
+            });
+          }),
+        );
+
+        alert(
+          `Đã thêm ${selectedFlashSaleProductIds.length} sản phẩm vào Flash Sale`,
+        );
       }
 
       await fetchFlashSaleItems(selectedFlashSaleId);
@@ -2926,6 +3139,10 @@ export default function AdminDashboard() {
           : "1",
       active: item.active ?? true,
     });
+
+    setSelectedFlashSaleProductIds(
+      item.productId ? [Number(item.productId)] : [],
+    );
 
     window.scrollTo({
       top: 0,
@@ -3045,6 +3262,503 @@ export default function AdminDashboard() {
       </div>
     );
   };
+
+  const getDateTimeValue = (value) => {
+    if (!value) {
+      return 0;
+    }
+
+    const timestamp = Date.parse(value);
+
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  };
+
+  const getPromotionProductName = (promotion) => {
+    const product = products.find(
+      (item) => Number(item.id) === Number(promotion.productId),
+    );
+
+    return product?.name || "";
+  };
+
+  const filteredDiscountPromotions = discountPromotions
+    .filter((promotion) => {
+      const keyword = normalizeText(promotionSearchKeyword);
+      const productName = getPromotionProductName(promotion);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(promotion.id).includes(keyword) ||
+        normalizeText(promotion.title).includes(keyword) ||
+        normalizeText(promotion.productId).includes(keyword) ||
+        normalizeText(productName).includes(keyword) ||
+        normalizeText(promotion.discountPercent).includes(keyword);
+
+      const matchesStatus =
+        promotionStatusFilter === "ALL" ||
+        (promotionStatusFilter === "ACTIVE" && Boolean(promotion.active)) ||
+        (promotionStatusFilter === "INACTIVE" && !Boolean(promotion.active));
+
+      const matchesProduct =
+        promotionProductFilter === "ALL" ||
+        Number(promotion.productId) === Number(promotionProductFilter);
+
+      return matchesKeyword && matchesStatus && matchesProduct;
+    })
+    .sort((a, b) => {
+      if (promotionSortMode === "DISCOUNT_DESC") {
+        return Number(b.discountPercent || 0) - Number(a.discountPercent || 0);
+      }
+
+      if (promotionSortMode === "DISCOUNT_ASC") {
+        return Number(a.discountPercent || 0) - Number(b.discountPercent || 0);
+      }
+
+      if (promotionSortMode === "TITLE_ASC") {
+        return normalizeText(a.title).localeCompare(normalizeText(b.title));
+      }
+
+      if (promotionSortMode === "START_ASC") {
+        return getDateTimeValue(a.startDate) - getDateTimeValue(b.startDate);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const promotionTotalPages = getTotalPages(filteredDiscountPromotions);
+  const paginatedDiscountPromotions = paginateItems(
+    filteredDiscountPromotions,
+    promotionPage,
+  );
+
+  const filteredCoupons = coupons
+    .filter((coupon) => {
+      const keyword = normalizeText(couponSearchKeyword);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(coupon.id).includes(keyword) ||
+        normalizeText(coupon.code).includes(keyword) ||
+        normalizeText(coupon.name).includes(keyword) ||
+        normalizeText(coupon.discountValue).includes(keyword);
+
+      const matchesStatus =
+        couponStatusFilter === "ALL" ||
+        (couponStatusFilter === "ACTIVE" && Boolean(coupon.active)) ||
+        (couponStatusFilter === "INACTIVE" && !Boolean(coupon.active));
+
+      const matchesType =
+        couponTypeFilter === "ALL" || coupon.discountType === couponTypeFilter;
+
+      return matchesKeyword && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      if (couponSortMode === "CODE_ASC") {
+        return normalizeText(a.code).localeCompare(normalizeText(b.code));
+      }
+
+      if (couponSortMode === "VALUE_DESC") {
+        return Number(b.discountValue || 0) - Number(a.discountValue || 0);
+      }
+
+      if (couponSortMode === "VALUE_ASC") {
+        return Number(a.discountValue || 0) - Number(b.discountValue || 0);
+      }
+
+      if (couponSortMode === "USED_DESC") {
+        return Number(b.usedCount || 0) - Number(a.usedCount || 0);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const couponTotalPages = getTotalPages(filteredCoupons);
+  const paginatedCoupons = paginateItems(filteredCoupons, couponPage);
+
+  const filteredFlashSales = flashSales
+    .filter((flashSale) => {
+      const keyword = normalizeText(flashSaleSearchKeyword);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(flashSale.id).includes(keyword) ||
+        normalizeText(flashSale.title).includes(keyword) ||
+        normalizeText(flashSale.subtitle).includes(keyword);
+
+      const matchesStatus =
+        flashSaleStatusFilter === "ALL" ||
+        (flashSaleStatusFilter === "ACTIVE" && Boolean(flashSale.active)) ||
+        (flashSaleStatusFilter === "INACTIVE" && !Boolean(flashSale.active));
+
+      return matchesKeyword && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (flashSaleSortMode === "SORT_ASC") {
+        return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+      }
+
+      if (flashSaleSortMode === "START_ASC") {
+        return getDateTimeValue(a.startTime) - getDateTimeValue(b.startTime);
+      }
+
+      if (flashSaleSortMode === "END_ASC") {
+        return getDateTimeValue(a.endTime) - getDateTimeValue(b.endTime);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const flashSaleTotalPages = getTotalPages(filteredFlashSales);
+  const paginatedFlashSales = paginateItems(filteredFlashSales, flashSalePage);
+
+  const filteredFlashSaleItems = flashSaleItems.filter((item) => {
+    const keyword = normalizeText(flashSaleItemSearchKeyword);
+    const productName = getProductNameById(item.productId);
+
+    const matchesKeyword =
+      !keyword ||
+      normalizeText(item.id).includes(keyword) ||
+      normalizeText(item.productId).includes(keyword) ||
+      normalizeText(productName).includes(keyword) ||
+      normalizeText(item.salePrice).includes(keyword);
+
+    const matchesStatus =
+      flashSaleItemStatusFilter === "ALL" ||
+      (flashSaleItemStatusFilter === "ACTIVE" && Boolean(item.active)) ||
+      (flashSaleItemStatusFilter === "INACTIVE" && !Boolean(item.active));
+
+    return matchesKeyword && matchesStatus;
+  });
+
+  const flashSaleItemTotalPages = getTotalPages(filteredFlashSaleItems);
+  const paginatedFlashSaleItems = paginateItems(
+    filteredFlashSaleItems,
+    flashSaleItemPage,
+  );
+
+  const getBrandCategoryName = (brand) => {
+    return brand.category?.name || brand.category || "";
+  };
+
+  const getPickerBrandsByCategory = (categoryName) => {
+    if (!categoryName || categoryName === "ALL") {
+      return brands;
+    }
+
+    return brands.filter(
+      (brand) =>
+        normalizeText(getBrandCategoryName(brand)) ===
+        normalizeText(categoryName),
+    );
+  };
+
+  const getFilteredPickerProducts = (keyword, category, brand) => {
+    const text = normalizeText(keyword);
+    const categoryText = category === "ALL" ? "" : normalizeText(category);
+    const brandText = brand === "ALL" ? "" : normalizeText(brand);
+
+    return products.filter((product) => {
+      const name = normalizeText(product.name);
+      const productCategory = normalizeText(product.category);
+      const productBrand = normalizeText(product.brand);
+      const productId = normalizeText(product.id);
+
+      const matchesKeyword =
+        !text ||
+        name.includes(text) ||
+        productCategory.includes(text) ||
+        productBrand.includes(text) ||
+        productId.includes(text);
+
+      const matchesCategory = !categoryText || productCategory === categoryText;
+
+      const matchesBrand = !brandText || productBrand === brandText;
+
+      return matchesKeyword && matchesCategory && matchesBrand;
+    });
+  };
+
+  const promotionPickerProducts = getFilteredPickerProducts(
+    promotionProductKeyword,
+    promotionProductCategory,
+    promotionProductBrand,
+  );
+
+  const flashSalePickerProducts = getFilteredPickerProducts(
+    flashSaleProductKeyword,
+    flashSaleProductCategory,
+    flashSaleProductBrand,
+  );
+
+  const homeBannerPickerProducts = getFilteredPickerProducts(
+    homeBannerProductKeyword,
+    homeBannerProductCategory,
+    homeBannerProductBrand,
+  );
+
+  const sectionBannerPickerProducts = getFilteredPickerProducts(
+    sectionBannerProductKeyword,
+    sectionBannerProductCategory,
+    sectionBannerProductBrand,
+  );
+
+  const toggleHomeBannerProduct = (productId) => {
+    const idNumber = Number(productId);
+
+    setSelectedBannerProductIds((currentIds) => {
+      if (currentIds.includes(idNumber)) {
+        return currentIds.filter((id) => id !== idNumber);
+      }
+
+      return [...currentIds, idNumber];
+    });
+  };
+
+  const toggleAllHomeBannerVisibleProducts = () => {
+    const visibleIds = homeBannerPickerProducts.map((product) =>
+      Number(product.id),
+    );
+
+    const isAllSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedBannerProductIds.includes(id));
+
+    if (isAllSelected) {
+      setSelectedBannerProductIds((currentIds) =>
+        currentIds.filter((id) => !visibleIds.includes(id)),
+      );
+
+      return;
+    }
+
+    setSelectedBannerProductIds((currentIds) =>
+      Array.from(new Set([...currentIds, ...visibleIds])),
+    );
+  };
+
+  const togglePromotionProduct = (productId) => {
+    const idNumber = Number(productId);
+
+    setSelectedPromotionProductIds((currentIds) => {
+      if (currentIds.includes(idNumber)) {
+        return currentIds.filter((id) => id !== idNumber);
+      }
+
+      return [...currentIds, idNumber];
+    });
+  };
+
+  const toggleFlashSaleProduct = (productId) => {
+    const idNumber = Number(productId);
+
+    setSelectedFlashSaleProductIds((currentIds) => {
+      if (currentIds.includes(idNumber)) {
+        return currentIds.filter((id) => id !== idNumber);
+      }
+
+      return [...currentIds, idNumber];
+    });
+  };
+
+  const toggleAllPromotionVisibleProducts = () => {
+    const visibleIds = promotionPickerProducts.map((product) =>
+      Number(product.id),
+    );
+
+    const isAllSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedPromotionProductIds.includes(id));
+
+    if (isAllSelected) {
+      setSelectedPromotionProductIds((currentIds) =>
+        currentIds.filter((id) => !visibleIds.includes(id)),
+      );
+
+      return;
+    }
+
+    setSelectedPromotionProductIds((currentIds) =>
+      Array.from(new Set([...currentIds, ...visibleIds])),
+    );
+  };
+
+  const toggleAllFlashSaleVisibleProducts = () => {
+    const visibleIds = flashSalePickerProducts.map((product) =>
+      Number(product.id),
+    );
+
+    const isAllSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedFlashSaleProductIds.includes(id));
+
+    if (isAllSelected) {
+      setSelectedFlashSaleProductIds((currentIds) =>
+        currentIds.filter((id) => !visibleIds.includes(id)),
+      );
+
+      return;
+    }
+
+    setSelectedFlashSaleProductIds((currentIds) =>
+      Array.from(new Set([...currentIds, ...visibleIds])),
+    );
+  };
+
+  const getHomeTargetLabel = (targetType) => {
+    const labels = {
+      COLLECTION: "Bộ sưu tập",
+      PRODUCT: "Sản phẩm",
+      CUSTOM_LINK: "Link tùy chỉnh",
+    };
+
+    return labels[targetType] || targetType || "Chưa cập nhật";
+  };
+
+  const getHomeSectionTypeLabel = (sectionType) => {
+    const labels = {
+      DEAL_CARD: "Card deal dưới banner",
+      PRODUCT_SECTION: "Khối sản phẩm",
+      TABBED_SECTION: "Khối dạng tab",
+      GOLDEN_HOUR_DEAL: "Giờ vàng deal sốc",
+      FLASH_SALE: "Deal sốc mỗi ngày",
+      HOT_TREND: "Sản phẩm hot trend",
+      NEW_ARRIVAL: "Hàng mới về",
+      CATEGORY_GRID: "Lưới danh mục",
+      BANNER_SLIDER_LARGE: "Banner lớn tự chạy",
+      DOUBLE_BANNER_SLIDER: "Banner đôi tự chạy",
+      PRODUCT_BANNER_SLIDER: "Banner sản phẩm tự chạy",
+    };
+
+    return labels[sectionType] || sectionType || "Chưa cập nhật";
+  };
+
+  const filteredHomeBanners = banners
+    .filter((banner) => {
+      const keyword = normalizeText(homeBannerSearchKeyword);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(banner.id).includes(keyword) ||
+        normalizeText(banner.title).includes(keyword) ||
+        normalizeText(banner.subtitle).includes(keyword) ||
+        normalizeText(banner.imageUrl).includes(keyword) ||
+        normalizeText(banner.targetUrl).includes(keyword) ||
+        normalizeText(banner.linkUrl).includes(keyword);
+
+      const matchesStatus =
+        homeBannerStatusFilter === "ALL" ||
+        (homeBannerStatusFilter === "ACTIVE" && Boolean(banner.active)) ||
+        (homeBannerStatusFilter === "INACTIVE" && !Boolean(banner.active));
+
+      const matchesTarget =
+        homeBannerTargetFilter === "ALL" ||
+        banner.targetType === homeBannerTargetFilter;
+
+      return matchesKeyword && matchesStatus && matchesTarget;
+    })
+    .sort((a, b) => {
+      if (homeBannerSortMode === "SORT_ASC") {
+        return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+      }
+
+      if (homeBannerSortMode === "SORT_DESC") {
+        return Number(b.sortOrder || 0) - Number(a.sortOrder || 0);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const homeBannerTotalPages = getTotalPages(filteredHomeBanners);
+  const paginatedHomeBanners = paginateItems(
+    filteredHomeBanners,
+    homeBannerPage,
+  );
+
+  const filteredHomeSections = homeSections
+    .filter((section) => {
+      const keyword = normalizeText(homeSectionSearchKeyword);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(section.id).includes(keyword) ||
+        normalizeText(section.title).includes(keyword) ||
+        normalizeText(section.sectionType).includes(keyword) ||
+        normalizeText(section.category).includes(keyword) ||
+        normalizeText(section.brand).includes(keyword);
+
+      const matchesType =
+        homeSectionTypeFilter === "ALL" ||
+        section.sectionType === homeSectionTypeFilter;
+
+      const matchesStatus =
+        homeSectionStatusFilter === "ALL" ||
+        (homeSectionStatusFilter === "ACTIVE" && Boolean(section.active)) ||
+        (homeSectionStatusFilter === "INACTIVE" && !Boolean(section.active));
+
+      return matchesKeyword && matchesType && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (homeSectionSortMode === "SORT_ASC") {
+        return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+      }
+
+      if (homeSectionSortMode === "SORT_DESC") {
+        return Number(b.sortOrder || 0) - Number(a.sortOrder || 0);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const homeSectionTotalPages = getTotalPages(filteredHomeSections);
+  const paginatedHomeSections = paginateItems(
+    filteredHomeSections,
+    homeSectionPage,
+  );
+
+  const filteredSectionBanners = sectionBanners
+    .filter((banner) => {
+      const keyword = normalizeText(sectionBannerSearchKeyword);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(banner.id).includes(keyword) ||
+        normalizeText(banner.title).includes(keyword) ||
+        normalizeText(banner.subtitle).includes(keyword) ||
+        normalizeText(banner.imageUrl).includes(keyword) ||
+        normalizeText(banner.targetUrl).includes(keyword);
+
+      const matchesTarget =
+        sectionBannerTargetFilter === "ALL" ||
+        banner.targetType === sectionBannerTargetFilter;
+
+      const matchesStatus =
+        sectionBannerStatusFilter === "ALL" ||
+        (sectionBannerStatusFilter === "ACTIVE" && Boolean(banner.active)) ||
+        (sectionBannerStatusFilter === "INACTIVE" && !Boolean(banner.active));
+
+      return matchesKeyword && matchesTarget && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sectionBannerSortMode === "GROUP_ASC") {
+        return Number(a.slideGroup || 0) - Number(b.slideGroup || 0);
+      }
+
+      if (sectionBannerSortMode === "SORT_ASC") {
+        return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+      }
+
+      if (sectionBannerSortMode === "SORT_DESC") {
+        return Number(b.sortOrder || 0) - Number(a.sortOrder || 0);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const sectionBannerTotalPages = getTotalPages(filteredSectionBanners);
+  const paginatedSectionBanners = paginateItems(
+    filteredSectionBanners,
+    sectionBannerPage,
+  );
 
   const filteredProducts = products
     .filter((item) => {
@@ -3545,19 +4259,127 @@ export default function AdminDashboard() {
                       onChange={handlePromotionChange}
                     />
 
-                    <select
-                      name="productId"
-                      value={promotionForm.productId}
-                      onChange={handlePromotionChange}
-                    >
-                      <option value="">Chọn sản phẩm áp dụng</option>
+                    <div className="admin-product-picker">
+                      <div className="admin-product-picker-head">
+                        <div>
+                          <strong>Chọn sản phẩm áp dụng</strong>
+                          <span>
+                            Đã chọn {selectedPromotionProductIds.length} sản
+                            phẩm
+                          </span>
+                        </div>
 
-                      {products.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name}
-                        </option>
-                      ))}
-                    </select>
+                        <div className="admin-product-picker-actions">
+                          <button
+                            type="button"
+                            onClick={toggleAllPromotionVisibleProducts}
+                          >
+                            Chọn / bỏ chọn kết quả đang lọc
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPromotionProductIds([])}
+                          >
+                            Bỏ chọn tất cả
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="admin-product-picker-toolbar">
+                        <input
+                          type="text"
+                          placeholder="Tìm theo ID, tên sản phẩm, danh mục, thương hiệu..."
+                          value={promotionProductKeyword}
+                          onChange={(event) =>
+                            setPromotionProductKeyword(event.target.value)
+                          }
+                        />
+
+                        <select
+                          value={promotionProductCategory}
+                          onChange={(event) => {
+                            setPromotionProductCategory(event.target.value);
+                            setPromotionProductBrand("ALL");
+                          }}
+                        >
+                          <option value="ALL">Tất cả danh mục</option>
+
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.icon || "📦"} {category.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={promotionProductBrand}
+                          onChange={(event) =>
+                            setPromotionProductBrand(event.target.value)
+                          }
+                        >
+                          <option value="ALL">Tất cả thương hiệu</option>
+
+                          {getPickerBrandsByCategory(
+                            promotionProductCategory,
+                          ).map((brand) => (
+                            <option key={brand.id} value={brand.name}>
+                              {brand.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="admin-product-picker-count">
+                        Hiển thị {promotionPickerProducts.length} /{" "}
+                        {products.length} sản phẩm
+                      </div>
+
+                      <div className="admin-product-picker-list">
+                        {promotionPickerProducts.length === 0 ? (
+                          <div className="admin-product-picker-empty">
+                            Không tìm thấy sản phẩm phù hợp
+                          </div>
+                        ) : (
+                          promotionPickerProducts.map((product) => {
+                            const checked =
+                              selectedPromotionProductIds.includes(
+                                Number(product.id),
+                              );
+
+                            return (
+                              <label
+                                key={product.id}
+                                className={
+                                  checked
+                                    ? "admin-product-picker-row selected"
+                                    : "admin-product-picker-row"
+                                }
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() =>
+                                    togglePromotionProduct(product.id)
+                                  }
+                                />
+
+                                <div>
+                                  <strong>{product.name}</strong>
+
+                                  <span>
+                                    ID: {product.id} • {product.category} •{" "}
+                                    {product.brand}
+                                  </span>
+                                </div>
+
+                                <b>{formatAdminPrice(product.price)}</b>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
 
                     <input
                       type="number"
@@ -3612,6 +4434,61 @@ export default function AdminDashboard() {
                 <div className="homepage-list-card">
                   <h3>Danh sách giảm giá sản phẩm</h3>
 
+                  <div className="admin-list-toolbar admin-promotion-toolbar">
+                    <input
+                      type="text"
+                      placeholder="Tìm theo ID, tên chương trình, sản phẩm, % giảm..."
+                      value={promotionSearchKeyword}
+                      onChange={(event) =>
+                        setPromotionSearchKeyword(event.target.value)
+                      }
+                    />
+
+                    <select
+                      value={promotionProductFilter}
+                      onChange={(event) =>
+                        setPromotionProductFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả sản phẩm</option>
+
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={promotionStatusFilter}
+                      onChange={(event) =>
+                        setPromotionStatusFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="ACTIVE">Đang áp dụng</option>
+                      <option value="INACTIVE">Đang tắt</option>
+                    </select>
+
+                    <select
+                      value={promotionSortMode}
+                      onChange={(event) =>
+                        setPromotionSortMode(event.target.value)
+                      }
+                    >
+                      <option value="NEWEST">Mới nhất trước</option>
+                      <option value="TITLE_ASC">Tên A-Z</option>
+                      <option value="DISCOUNT_DESC">Giảm nhiều nhất</option>
+                      <option value="DISCOUNT_ASC">Giảm ít nhất</option>
+                      <option value="START_ASC">Ngày bắt đầu gần nhất</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-list-count">
+                    Hiển thị {paginatedDiscountPromotions.length} /{" "}
+                    {filteredDiscountPromotions.length} khuyến mãi sản phẩm
+                  </div>
+
                   <table>
                     <thead>
                       <tr>
@@ -3626,7 +4503,7 @@ export default function AdminDashboard() {
                     </thead>
 
                     <tbody>
-                      {discountPromotions.map((promotion) => {
+                      {paginatedDiscountPromotions.map((promotion) => {
                         const product = products.find(
                           (item) =>
                             Number(item.id) === Number(promotion.productId),
@@ -3672,6 +4549,11 @@ export default function AdminDashboard() {
                       })}
                     </tbody>
                   </table>
+                  {renderPagination(
+                    promotionPage,
+                    promotionTotalPages,
+                    setPromotionPage,
+                  )}
                 </div>
               </>
             )}
@@ -3783,6 +4665,57 @@ export default function AdminDashboard() {
                 <div className="homepage-list-card">
                   <h3>Danh sách mã giảm giá</h3>
 
+                  <div className="admin-list-toolbar admin-promotion-toolbar">
+                    <input
+                      type="text"
+                      placeholder="Tìm theo ID, mã, tên mã, giá trị giảm..."
+                      value={couponSearchKeyword}
+                      onChange={(event) =>
+                        setCouponSearchKeyword(event.target.value)
+                      }
+                    />
+
+                    <select
+                      value={couponTypeFilter}
+                      onChange={(event) =>
+                        setCouponTypeFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả loại giảm</option>
+                      <option value="PERCENT">Giảm theo %</option>
+                      <option value="AMOUNT">Giảm số tiền</option>
+                    </select>
+
+                    <select
+                      value={couponStatusFilter}
+                      onChange={(event) =>
+                        setCouponStatusFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="ACTIVE">Đang bật</option>
+                      <option value="INACTIVE">Đang tắt</option>
+                    </select>
+
+                    <select
+                      value={couponSortMode}
+                      onChange={(event) =>
+                        setCouponSortMode(event.target.value)
+                      }
+                    >
+                      <option value="NEWEST">Mới nhất trước</option>
+                      <option value="CODE_ASC">Mã A-Z</option>
+                      <option value="VALUE_DESC">Giá trị giảm cao nhất</option>
+                      <option value="VALUE_ASC">Giá trị giảm thấp nhất</option>
+                      <option value="USED_DESC">Dùng nhiều nhất</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-list-count">
+                    Hiển thị {paginatedCoupons.length} /{" "}
+                    {filteredCoupons.length} mã giảm giá
+                  </div>
+
                   <table>
                     <thead>
                       <tr>
@@ -3800,7 +4733,7 @@ export default function AdminDashboard() {
                     </thead>
 
                     <tbody>
-                      {coupons.map((coupon) => (
+                      {paginatedCoupons.map((coupon) => (
                         <tr key={coupon.id}>
                           <td>{coupon.id}</td>
 
@@ -3859,6 +4792,11 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  {renderPagination(
+                    couponPage,
+                    couponTotalPages,
+                    setCouponPage,
+                  )}
                 </div>
               </>
             )}
@@ -3990,6 +4928,45 @@ export default function AdminDashboard() {
                 <div className="homepage-list-card">
                   <h3>Danh sách chiến dịch Flash Sale</h3>
 
+                  <div className="admin-list-toolbar admin-promotion-toolbar">
+                    <input
+                      type="text"
+                      placeholder="Tìm theo ID, tên chiến dịch, mô tả..."
+                      value={flashSaleSearchKeyword}
+                      onChange={(event) =>
+                        setFlashSaleSearchKeyword(event.target.value)
+                      }
+                    />
+
+                    <select
+                      value={flashSaleStatusFilter}
+                      onChange={(event) =>
+                        setFlashSaleStatusFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="ACTIVE">Đang bật</option>
+                      <option value="INACTIVE">Đang tắt</option>
+                    </select>
+
+                    <select
+                      value={flashSaleSortMode}
+                      onChange={(event) =>
+                        setFlashSaleSortMode(event.target.value)
+                      }
+                    >
+                      <option value="NEWEST">Mới nhất trước</option>
+                      <option value="SORT_ASC">Thứ tự hiển thị</option>
+                      <option value="START_ASC">Bắt đầu gần nhất</option>
+                      <option value="END_ASC">Kết thúc gần nhất</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-list-count">
+                    Hiển thị {paginatedFlashSales.length} /{" "}
+                    {filteredFlashSales.length} chiến dịch
+                  </div>
+
                   <table>
                     <thead>
                       <tr>
@@ -4004,7 +4981,7 @@ export default function AdminDashboard() {
                     </thead>
 
                     <tbody>
-                      {flashSales.map((flashSale) => (
+                      {paginatedFlashSales.map((flashSale) => (
                         <tr key={flashSale.id}>
                           <td>{flashSale.id}</td>
 
@@ -4073,6 +5050,11 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  {renderPagination(
+                    flashSalePage,
+                    flashSaleTotalPages,
+                    setFlashSalePage,
+                  )}
                 </div>
 
                 <div className="homepage-card">
@@ -4090,27 +5072,150 @@ export default function AdminDashboard() {
                   )}
 
                   <form onSubmit={handleSaveFlashSaleItem}>
-                    <select
-                      name="productId"
-                      value={flashSaleItemForm.productId}
-                      onChange={handleProductForFlashSaleChange}
-                    >
-                      <option value="">Chọn sản phẩm</option>
+                    <div className="admin-product-picker">
+                      <div className="admin-product-picker-head">
+                        <div>
+                          <strong>Chọn sản phẩm Flash Sale</strong>
+                          <span>
+                            Đã chọn {selectedFlashSaleProductIds.length} sản
+                            phẩm
+                          </span>
+                        </div>
 
-                      {products.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} - {formatAdminPrice(product.price)}
-                        </option>
-                      ))}
-                    </select>
+                        <div className="admin-product-picker-actions">
+                          <button
+                            type="button"
+                            onClick={toggleAllFlashSaleVisibleProducts}
+                          >
+                            Chọn / bỏ chọn kết quả đang lọc
+                          </button>
 
-                    <input
-                      type="number"
-                      name="salePrice"
-                      placeholder="Giá sale: 18990000"
-                      value={flashSaleItemForm.salePrice}
-                      onChange={handleFlashSaleItemChange}
-                    />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFlashSaleProductIds([])}
+                          >
+                            Bỏ chọn tất cả
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="admin-product-picker-toolbar">
+                        <input
+                          type="text"
+                          placeholder="Tìm theo ID, tên sản phẩm, danh mục, thương hiệu..."
+                          value={flashSaleProductKeyword}
+                          onChange={(event) =>
+                            setFlashSaleProductKeyword(event.target.value)
+                          }
+                        />
+
+                        <select
+                          value={flashSaleProductCategory}
+                          onChange={(event) => {
+                            setFlashSaleProductCategory(event.target.value);
+                            setFlashSaleProductBrand("ALL");
+                          }}
+                        >
+                          <option value="ALL">Tất cả danh mục</option>
+
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.icon || "📦"} {category.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={flashSaleProductBrand}
+                          onChange={(event) =>
+                            setFlashSaleProductBrand(event.target.value)
+                          }
+                        >
+                          <option value="ALL">Tất cả thương hiệu</option>
+
+                          {getPickerBrandsByCategory(
+                            flashSaleProductCategory,
+                          ).map((brand) => (
+                            <option key={brand.id} value={brand.name}>
+                              {brand.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="admin-product-picker-count">
+                        Hiển thị {flashSalePickerProducts.length} /{" "}
+                        {products.length} sản phẩm
+                      </div>
+
+                      <div className="admin-product-picker-list">
+                        {flashSalePickerProducts.length === 0 ? (
+                          <div className="admin-product-picker-empty">
+                            Không tìm thấy sản phẩm phù hợp
+                          </div>
+                        ) : (
+                          flashSalePickerProducts.map((product) => {
+                            const checked =
+                              selectedFlashSaleProductIds.includes(
+                                Number(product.id),
+                              );
+                            const alreadyInFlashSale = flashSaleItems.some(
+                              (item) =>
+                                Number(item.productId) === Number(product.id),
+                            );
+
+                            return (
+                              <label
+                                key={product.id}
+                                className={
+                                  checked
+                                    ? "admin-product-picker-row selected"
+                                    : "admin-product-picker-row"
+                                }
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={
+                                    !editingFlashSaleItemId &&
+                                    alreadyInFlashSale
+                                  }
+                                  onChange={() =>
+                                    toggleFlashSaleProduct(product.id)
+                                  }
+                                />
+
+                                <div>
+                                  <strong>{product.name}</strong>
+
+                                  <span>
+                                    ID: {product.id} • {product.category} •{" "}
+                                    {product.brand}
+                                  </span>
+
+                                  {!editingFlashSaleItemId &&
+                                    alreadyInFlashSale && (
+                                      <em>Đã có trong Flash Sale này</em>
+                                    )}
+                                </div>
+
+                                <b>{formatAdminPrice(product.price)}</b>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {editingFlashSaleItemId && (
+                      <input
+                        type="number"
+                        name="salePrice"
+                        placeholder="Giá sale khi sửa 1 sản phẩm"
+                        value={flashSaleItemForm.salePrice}
+                        onChange={handleFlashSaleItemChange}
+                      />
+                    )}
 
                     <input
                       type="number"
@@ -4175,6 +5280,33 @@ export default function AdminDashboard() {
                 <div className="homepage-list-card">
                   <h3>Danh sách sản phẩm trong Flash Sale</h3>
 
+                  <div className="admin-list-toolbar admin-promotion-toolbar">
+                    <input
+                      type="text"
+                      placeholder="Tìm theo ID, tên sản phẩm, giá sale..."
+                      value={flashSaleItemSearchKeyword}
+                      onChange={(event) =>
+                        setFlashSaleItemSearchKeyword(event.target.value)
+                      }
+                    />
+
+                    <select
+                      value={flashSaleItemStatusFilter}
+                      onChange={(event) =>
+                        setFlashSaleItemStatusFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="ACTIVE">Đang bật</option>
+                      <option value="INACTIVE">Đang tắt</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-list-count">
+                    Hiển thị {paginatedFlashSaleItems.length} /{" "}
+                    {filteredFlashSaleItems.length} sản phẩm Flash Sale
+                  </div>
+
                   <table>
                     <thead>
                       <tr>
@@ -4192,7 +5324,7 @@ export default function AdminDashboard() {
                     </thead>
 
                     <tbody>
-                      {flashSaleItems.map((item) => (
+                      {paginatedFlashSaleItems.map((item) => (
                         <tr key={item.id}>
                           <td>{item.id}</td>
 
@@ -4235,6 +5367,11 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  {renderPagination(
+                    flashSaleItemPage,
+                    flashSaleItemTotalPages,
+                    setFlashSaleItemPage,
+                  )}
                 </div>
               </div>
             )}
@@ -4371,42 +5508,123 @@ export default function AdminDashboard() {
                   )}
 
                   {bannerForm.targetType === "COLLECTION" && (
-                    <div className="banner-product-select-box">
-                      <div className="banner-product-select-head">
+                    <div className="admin-product-picker">
+                      <div className="admin-product-picker-head">
                         <div>
-                          <h4>Sản phẩm hiển thị khi click banner</h4>
-                          <p>
+                          <strong>Chọn sản phẩm khi click banner</strong>
+                          <span>
                             Đã chọn {selectedBannerProductIds.length} sản phẩm
-                          </p>
+                          </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setSelectedBannerProductIds([])}
-                        >
-                          Bỏ chọn tất cả
-                        </button>
+                        <div className="admin-product-picker-actions">
+                          <button
+                            type="button"
+                            onClick={toggleAllHomeBannerVisibleProducts}
+                          >
+                            Chọn / bỏ chọn kết quả đang lọc
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBannerProductIds([])}
+                          >
+                            Bỏ chọn tất cả
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="banner-product-check-list">
-                        {products.map((product) => (
-                          <label
-                            className="banner-product-check-item"
-                            key={product.id}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedBannerProductIds.includes(
-                                Number(product.id),
-                              )}
-                              onChange={() =>
-                                handleToggleBannerProduct(product.id)
-                              }
-                            />
+                      <div className="admin-product-picker-toolbar">
+                        <input
+                          type="text"
+                          placeholder="Tìm theo ID, tên sản phẩm, danh mục, thương hiệu..."
+                          value={homeBannerProductKeyword}
+                          onChange={(event) =>
+                            setHomeBannerProductKeyword(event.target.value)
+                          }
+                        />
 
-                            <span>{product.name}</span>
-                          </label>
-                        ))}
+                        <select
+                          value={homeBannerProductCategory}
+                          onChange={(event) => {
+                            setHomeBannerProductCategory(event.target.value);
+                            setHomeBannerProductBrand("ALL");
+                          }}
+                        >
+                          <option value="ALL">Tất cả danh mục</option>
+
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.icon || "📦"} {category.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={homeBannerProductBrand}
+                          onChange={(event) =>
+                            setHomeBannerProductBrand(event.target.value)
+                          }
+                        >
+                          <option value="ALL">Tất cả thương hiệu</option>
+
+                          {getPickerBrandsByCategory(
+                            homeBannerProductCategory,
+                          ).map((brand) => (
+                            <option key={brand.id} value={brand.name}>
+                              {brand.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="admin-product-picker-count">
+                        Hiển thị {homeBannerPickerProducts.length} /{" "}
+                        {products.length} sản phẩm
+                      </div>
+
+                      <div className="admin-product-picker-list">
+                        {homeBannerPickerProducts.length === 0 ? (
+                          <div className="admin-product-picker-empty">
+                            Không tìm thấy sản phẩm phù hợp
+                          </div>
+                        ) : (
+                          homeBannerPickerProducts.map((product) => {
+                            const checked = selectedBannerProductIds.includes(
+                              Number(product.id),
+                            );
+
+                            return (
+                              <label
+                                key={product.id}
+                                className={
+                                  checked
+                                    ? "admin-product-picker-row selected"
+                                    : "admin-product-picker-row"
+                                }
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() =>
+                                    toggleHomeBannerProduct(product.id)
+                                  }
+                                />
+
+                                <div>
+                                  <strong>{product.name}</strong>
+
+                                  <span>
+                                    ID: {product.id} • {product.category} •{" "}
+                                    {product.brand}
+                                  </span>
+                                </div>
+
+                                <b>{formatAdminPrice(product.price)}</b>
+                              </label>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   )}
@@ -4909,6 +6127,56 @@ export default function AdminDashboard() {
             <div className="homepage-list-card">
               <h3>Danh sách banner</h3>
 
+              <div className="admin-list-toolbar admin-homepage-toolbar">
+                <input
+                  type="text"
+                  placeholder="Tìm theo ID, tiêu đề, mô tả, link..."
+                  value={homeBannerSearchKeyword}
+                  onChange={(event) =>
+                    setHomeBannerSearchKeyword(event.target.value)
+                  }
+                />
+
+                <select
+                  value={homeBannerTargetFilter}
+                  onChange={(event) =>
+                    setHomeBannerTargetFilter(event.target.value)
+                  }
+                >
+                  <option value="ALL">Tất cả kiểu click</option>
+                  <option value="COLLECTION">Bộ sưu tập</option>
+                  <option value="PRODUCT">Sản phẩm</option>
+                  <option value="CUSTOM_LINK">Link tùy chỉnh</option>
+                </select>
+
+                <select
+                  value={homeBannerStatusFilter}
+                  onChange={(event) =>
+                    setHomeBannerStatusFilter(event.target.value)
+                  }
+                >
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Đang hiển thị</option>
+                  <option value="INACTIVE">Đang ẩn</option>
+                </select>
+
+                <select
+                  value={homeBannerSortMode}
+                  onChange={(event) =>
+                    setHomeBannerSortMode(event.target.value)
+                  }
+                >
+                  <option value="NEWEST">Mới nhất trước</option>
+                  <option value="SORT_ASC">Thứ tự tăng dần</option>
+                  <option value="SORT_DESC">Thứ tự giảm dần</option>
+                </select>
+              </div>
+
+              <div className="admin-list-count">
+                Hiển thị {paginatedHomeBanners.length} /{" "}
+                {filteredHomeBanners.length} banner
+              </div>
+
               <table>
                 <thead>
                   <tr>
@@ -4923,7 +6191,7 @@ export default function AdminDashboard() {
                 </thead>
 
                 <tbody>
-                  {banners.map((banner) => (
+                  {paginatedHomeBanners.map((banner) => (
                     <tr key={banner.id}>
                       <td>{banner.id}</td>
 
@@ -4956,6 +6224,11 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+              {renderPagination(
+                homeBannerPage,
+                homeBannerTotalPages,
+                setHomeBannerPage,
+              )}
             </div>
 
             <div className="homepage-list-card">
@@ -5108,28 +6381,127 @@ export default function AdminDashboard() {
                     </label>
 
                     {sectionBannerForm.targetType === "COLLECTION" && (
-                      <div className="admin-card-sub">
-                        <h4>Sản phẩm hiển thị khi click banner</h4>
+                      <div className="admin-product-picker">
+                        <div className="admin-product-picker-head">
+                          <div>
+                            <strong>Chọn sản phẩm cho banner trong khối</strong>
+                            <span>
+                              Đã chọn {sectionBannerProductIds.length} sản phẩm
+                            </span>
+                          </div>
 
-                        <div className="product-check-list">
-                          {products.map((product) => (
-                            <label
-                              key={product.id}
-                              className="product-check-item"
+                          <div className="admin-product-picker-actions">
+                            <button
+                              type="button"
+                              onClick={toggleAllSectionBannerVisibleProducts}
                             >
-                              <input
-                                type="checkbox"
-                                checked={sectionBannerProductIds.includes(
-                                  Number(product.id),
-                                )}
-                                onChange={() =>
-                                  handleToggleSectionBannerProduct(product.id)
-                                }
-                              />
+                              Chọn / bỏ chọn kết quả đang lọc
+                            </button>
 
-                              <span>{product.name}</span>
-                            </label>
-                          ))}
+                            <button
+                              type="button"
+                              onClick={() => setSectionBannerProductIds([])}
+                            >
+                              Bỏ chọn tất cả
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="admin-product-picker-toolbar">
+                          <input
+                            type="text"
+                            placeholder="Tìm theo ID, tên sản phẩm, danh mục, thương hiệu..."
+                            value={sectionBannerProductKeyword}
+                            onChange={(event) =>
+                              setSectionBannerProductKeyword(event.target.value)
+                            }
+                          />
+
+                          <select
+                            value={sectionBannerProductCategory}
+                            onChange={(event) => {
+                              setSectionBannerProductCategory(
+                                event.target.value,
+                              );
+                              setSectionBannerProductBrand("ALL");
+                            }}
+                          >
+                            <option value="ALL">Tất cả danh mục</option>
+
+                            {categories.map((category) => (
+                              <option key={category.id} value={category.name}>
+                                {category.icon || "📦"} {category.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={sectionBannerProductBrand}
+                            onChange={(event) =>
+                              setSectionBannerProductBrand(event.target.value)
+                            }
+                          >
+                            <option value="ALL">Tất cả thương hiệu</option>
+
+                            {getPickerBrandsByCategory(
+                              sectionBannerProductCategory,
+                            ).map((brand) => (
+                              <option key={brand.id} value={brand.name}>
+                                {brand.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="admin-product-picker-count">
+                          Hiển thị {sectionBannerPickerProducts.length} /{" "}
+                          {products.length} sản phẩm
+                        </div>
+
+                        <div className="admin-product-picker-list">
+                          {sectionBannerPickerProducts.length === 0 ? (
+                            <div className="admin-product-picker-empty">
+                              Không tìm thấy sản phẩm phù hợp
+                            </div>
+                          ) : (
+                            sectionBannerPickerProducts.map((product) => {
+                              const checked = sectionBannerProductIds.includes(
+                                Number(product.id),
+                              );
+
+                              return (
+                                <label
+                                  key={product.id}
+                                  className={
+                                    checked
+                                      ? "admin-product-picker-row selected"
+                                      : "admin-product-picker-row"
+                                  }
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() =>
+                                      handleToggleSectionBannerProduct(
+                                        product.id,
+                                      )
+                                    }
+                                  />
+
+                                  <div>
+                                    <strong>{product.name}</strong>
+
+                                    <span>
+                                      ID: {product.id} • {product.category} •{" "}
+                                      {product.brand}
+                                    </span>
+                                  </div>
+
+                                  <b>{formatAdminPrice(product.price)}</b>
+                                </label>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
                     )}
@@ -5153,6 +6525,57 @@ export default function AdminDashboard() {
 
                   <h3>Danh sách banner trong khối</h3>
 
+                  <div className="admin-list-toolbar admin-homepage-toolbar">
+                    <input
+                      type="text"
+                      placeholder="Tìm theo ID, tiêu đề, mô tả, link..."
+                      value={sectionBannerSearchKeyword}
+                      onChange={(event) =>
+                        setSectionBannerSearchKeyword(event.target.value)
+                      }
+                    />
+
+                    <select
+                      value={sectionBannerTargetFilter}
+                      onChange={(event) =>
+                        setSectionBannerTargetFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả kiểu click</option>
+                      <option value="COLLECTION">Bộ sưu tập</option>
+                      <option value="PRODUCT">Sản phẩm</option>
+                      <option value="CUSTOM_LINK">Link tùy chỉnh</option>
+                    </select>
+
+                    <select
+                      value={sectionBannerStatusFilter}
+                      onChange={(event) =>
+                        setSectionBannerStatusFilter(event.target.value)
+                      }
+                    >
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="ACTIVE">Đang hiển thị</option>
+                      <option value="INACTIVE">Đang ẩn</option>
+                    </select>
+
+                    <select
+                      value={sectionBannerSortMode}
+                      onChange={(event) =>
+                        setSectionBannerSortMode(event.target.value)
+                      }
+                    >
+                      <option value="SORT_ASC">Thứ tự tăng dần</option>
+                      <option value="SORT_DESC">Thứ tự giảm dần</option>
+                      <option value="GROUP_ASC">Theo nhóm slide</option>
+                      <option value="NEWEST">Mới nhất trước</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-list-count">
+                    Hiển thị {paginatedSectionBanners.length} /{" "}
+                    {filteredSectionBanners.length} banner trong khối
+                  </div>
+
                   <table>
                     <thead>
                       <tr>
@@ -5169,7 +6592,7 @@ export default function AdminDashboard() {
                     </thead>
 
                     <tbody>
-                      {sectionBanners.map((banner) => (
+                      {paginatedSectionBanners.map((banner) => (
                         <tr key={banner.id}>
                           <td>{banner.id}</td>
 
@@ -5215,10 +6638,79 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  {renderPagination(
+                    sectionBannerPage,
+                    sectionBannerTotalPages,
+                    setSectionBannerPage,
+                  )}
                 </div>
               )}
 
               <h3>Danh sách khối trang chủ</h3>
+
+              <div className="admin-list-toolbar admin-homepage-toolbar">
+                <input
+                  type="text"
+                  placeholder="Tìm theo ID, tên khối, danh mục, thương hiệu..."
+                  value={homeSectionSearchKeyword}
+                  onChange={(event) =>
+                    setHomeSectionSearchKeyword(event.target.value)
+                  }
+                />
+
+                <select
+                  value={homeSectionTypeFilter}
+                  onChange={(event) =>
+                    setHomeSectionTypeFilter(event.target.value)
+                  }
+                >
+                  <option value="ALL">Tất cả loại khối</option>
+                  <option value="DEAL_CARD">Card deal dưới banner</option>
+                  <option value="PRODUCT_SECTION">Khối sản phẩm</option>
+                  <option value="TABBED_SECTION">Khối dạng tab</option>
+                  <option value="GOLDEN_HOUR_DEAL">Giờ vàng deal sốc</option>
+                  <option value="FLASH_SALE">Deal sốc mỗi ngày</option>
+                  <option value="HOT_TREND">Hot trend</option>
+                  <option value="NEW_ARRIVAL">Hàng mới về</option>
+                  <option value="CATEGORY_GRID">Lưới danh mục</option>
+                  <option value="BANNER_SLIDER_LARGE">
+                    Banner lớn tự chạy
+                  </option>
+                  <option value="DOUBLE_BANNER_SLIDER">
+                    Banner đôi tự chạy
+                  </option>
+                  <option value="PRODUCT_BANNER_SLIDER">
+                    Banner sản phẩm tự chạy
+                  </option>
+                </select>
+
+                <select
+                  value={homeSectionStatusFilter}
+                  onChange={(event) =>
+                    setHomeSectionStatusFilter(event.target.value)
+                  }
+                >
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Đang hiển thị</option>
+                  <option value="INACTIVE">Đang ẩn</option>
+                </select>
+
+                <select
+                  value={homeSectionSortMode}
+                  onChange={(event) =>
+                    setHomeSectionSortMode(event.target.value)
+                  }
+                >
+                  <option value="SORT_ASC">Thứ tự tăng dần</option>
+                  <option value="SORT_DESC">Thứ tự giảm dần</option>
+                  <option value="NEWEST">Mới nhất trước</option>
+                </select>
+              </div>
+
+              <div className="admin-list-count">
+                Hiển thị {paginatedHomeSections.length} /{" "}
+                {filteredHomeSections.length} khối
+              </div>
 
               <table>
                 <thead>
@@ -5237,7 +6729,7 @@ export default function AdminDashboard() {
                 </thead>
 
                 <tbody>
-                  {homeSections.map((section) => (
+                  {paginatedHomeSections.map((section) => (
                     <tr key={section.id}>
                       <td>{section.id}</td>
 
@@ -5286,6 +6778,11 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+              {renderPagination(
+                homeSectionPage,
+                homeSectionTotalPages,
+                setHomeSectionPage,
+              )}
             </div>
           </div>
         )}
