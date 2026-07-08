@@ -27,7 +27,7 @@ const formatDate = (value) => {
   return new Date(value).toLocaleString("vi-VN");
 };
 
-export default function ProductReviews({ productId }) {
+export default function ProductReviews({ productId, onSummaryChange }) {
   const [reviews, setReviews] = useState([]);
 
   const [summary, setSummary] = useState({
@@ -76,19 +76,20 @@ export default function ProductReviews({ productId }) {
 
       setReviews(Array.isArray(reviewData) ? reviewData : []);
 
-      setSummary(
-        summaryData || {
-          averageRating: 0,
-          totalReviews: 0,
-          ratingCounts: {},
-        },
-      );
+      const nextSummary = summaryData || {
+        averageRating: 0,
+        totalReviews: 0,
+        ratingCounts: {},
+      };
+
+      setSummary(nextSummary);
+      onSummaryChange?.(nextSummary);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [productId]);
+  }, [productId, onSummaryChange]);
 
   useEffect(() => {
     loadReviews();

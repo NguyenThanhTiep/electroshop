@@ -8,9 +8,11 @@ import ProductReviews from "../components/ProductReviews";
 
 import { useToast } from "../components/common/ToastProvider";
 
+import Footer from "../components/Footer";
+
 import Header from "../components/Header";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Link,
@@ -29,6 +31,34 @@ import {
 } from "../services/flashSaleApi";
 
 import { getActivePromotions } from "../services/promotionApi";
+
+import { getReviewSummary } from "../services/reviewApi";
+
+const RELATED_FILTERS = [
+  {
+    value: "ALL",
+    label: "Tất cả",
+  },
+  {
+    value: "BRAND",
+    label: "Cùng thương hiệu",
+  },
+  {
+    value: "PRICE",
+    label: "Cùng tầm giá",
+  },
+  {
+    value: "DEAL",
+    label: "Đang giảm giá",
+  },
+  {
+    value: "BEST_SELLER",
+    label: "Bán chạy",
+  },
+];
+
+const RELATED_PRICE_GAP_RATIO = 0.25;
+
 export default function ProductDetail() {
   const toast = useToast();
 
@@ -43,6 +73,12 @@ export default function ProductDetail() {
 
   const [activePromotion, setActivePromotion] = useState(null);
 
+  const [reviewSummary, setReviewSummary] = useState({
+    averageRating: 0,
+    totalReviews: 0,
+    ratingCounts: {},
+  });
+
   const [activePromotions, setActivePromotions] = useState([]);
 
   const [activeFlashSales, setActiveFlashSales] = useState([]);
@@ -50,6 +86,12 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState("");
 
   const [relatedProducts, setRelatedProducts] = useState([]);
+
+  const [relatedFilter, setRelatedFilter] = useState("ALL");
+
+  const [relatedScrollProgress, setRelatedScrollProgress] = useState(0);
+
+  const relatedSliderRef = useRef(null);
 
   const [showFullscreen, setShowFullscreen] = useState(false);
 
@@ -69,6 +111,8 @@ export default function ProductDetail() {
       left: 0,
       behavior: "auto",
     });
+
+    setRelatedFilter("ALL");
   }, [id]);
 
   useEffect(() => {
@@ -303,6 +347,151 @@ export default function ProductDetail() {
     };
   };
 
+  const isSameRelatedBrand = (item) => {
+    const currentBrand = normalizeComparableText(product?.brand);
+
+    return (
+      currentBrand && normalizeComparableText(item?.brand) === currentBrand
+    );
+  };
+
+  const isSameRelatedCategory = (item) => {
+    const currentCategory = normalizeComparableText(product?.category);
+
+    return (
+      currentCategory &&
+      normalizeComparableText(item?.category) === currentCategory
+    );
+  };
+
+  const isRelatedNearPrice = (item) => {
+    const currentPrice = convertPriceToNumber(product?.price);
+    const itemPrice = convertPriceToNumber(item?.price);
+
+    if (currentPrice <= 0 || itemPrice <= 0) {
+      return false;
+    }
+
+    return (
+      Math.abs(itemPrice - currentPrice) / currentPrice <=
+      RELATED_PRICE_GAP_RATIO
+    );
+  };
+
+  const isRelatedOnDeal = (item) => {
+    const priceInfo = getRelatedPriceInfo(item);
+
+    return priceInfo.priceSource && priceInfo.priceSource !== "REGULAR";
+  };
+
+  const isRelatedBestSeller = (item) => {
+    return Number(item?.soldQuantity || item?.sold || 0) > 0;
+  };
+
+  const isRelatedProductVisible = (item, filterType) => {
+    if (filterType === "BRAND") {
+      return isSameRelatedBrand(item);
+    }
+
+    if (filterType === "PRICE") {
+      return isRelatedNearPrice(item);
+    }
+
+    if (filterType === "DEAL") {
+      return isRelatedOnDeal(item);
+    }
+
+    if (filterType === "BEST_SELLER") {
+      return isRelatedBestSeller(item);
+    }
+
+    return true;
+  };
+
+  const getRelatedReasonBadges = (item) => {
+    const badges = [];
+
+    if (isSameRelatedBrand(item)) {
+      badges.push(`Cùng ${item.brand}`);
+    } else if (isSameRelatedCategory(item)) {
+      badges.push("Cùng danh mục");
+    }
+
+    if (isRelatedNearPrice(item)) {
+      badges.push("Giá gần giống");
+    }
+
+    if (isRelatedBestSeller(item)) {
+      badges.push("Bán chạy");
+    }
+
+    return badges.slice(0, 1);
+  };
+
+  const getRelatedFilterCount = (filterType) => {
+    return relatedProducts.filter((item) =>
+      isRelatedProductVisible(item, filterType),
+    ).length;
+  };
+
+  const filteredRelatedProducts = relatedProducts.filter((item) =>
+    isRelatedProductVisible(item, relatedFilter),
+  );
+
+  const updateRelatedScrollProgress = () => {
+    const slider = relatedSliderRef.current;
+
+    if (!slider) {
+      setRelatedScrollProgress(0);
+      return;
+    }
+
+    const maxScrollLeft = slider.scrollWidth - slider.clientWidth;
+
+    if (maxScrollLeft <= 0) {
+      setRelatedScrollProgress(100);
+      return;
+    }
+
+    const nextProgress = (slider.scrollLeft / maxScrollLeft) * 100;
+
+    setRelatedScrollProgress(Math.max(0, Math.min(100, nextProgress)));
+  };
+
+  const scrollRelatedProducts = (direction) => {
+    const slider = relatedSliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    slider.scrollBy({
+      left: slider.clientWidth * 0.9 * direction,
+      behavior: "smooth",
+    });
+  };
+
+  const handleRelatedFilterChange = (filterType) => {
+    setRelatedFilter(filterType);
+
+    window.requestAnimationFrame(() => {
+      relatedSliderRef.current?.scrollTo({
+        left: 0,
+        behavior: "smooth",
+      });
+    });
+  };
+
+  useEffect(() => {
+    window.requestAnimationFrame(updateRelatedScrollProgress);
+
+    window.addEventListener("resize", updateRelatedScrollProgress);
+
+    return () => {
+      window.removeEventListener("resize", updateRelatedScrollProgress);
+    };
+  }, [filteredRelatedProducts.length, relatedFilter]);
+
   const calculateRegularPrice = () => {
     const basePrice = convertPriceToNumber(product.price);
 
@@ -389,6 +578,15 @@ export default function ProductDetail() {
       ? Number(activeFlashSaleProduct?.soldQuantity || 0)
       : Number(product.soldQuantity || 0);
 
+  const averageRating = Number(reviewSummary.averageRating || 0);
+
+  const totalReviews = Number(reviewSummary.totalReviews || 0);
+
+  const ratingText =
+    totalReviews > 0 && averageRating > 0
+      ? averageRating.toFixed(1).replace(".0", "")
+      : "Chưa có đánh giá";
+
   const visibleOptions = showAllOptions
     ? productOptions
     : productOptions.slice(0, 2);
@@ -436,6 +634,7 @@ export default function ProductDetail() {
         flashSaleData,
         promotionData,
         activeFlashSaleList,
+        reviewSummaryData,
         allProducts,
       ] =
         await Promise.all([
@@ -446,6 +645,12 @@ export default function ProductDetail() {
           getActivePromotions(),
 
           getActiveFlashSales(),
+
+          getReviewSummary(id).catch(() => ({
+            averageRating: 0,
+            totalReviews: 0,
+            ratingCounts: {},
+          })),
 
           getProducts(),
         ]);
@@ -466,6 +671,14 @@ export default function ProductDetail() {
         Array.isArray(activeFlashSaleList) ? activeFlashSaleList : [],
       );
 
+      setReviewSummary(
+        reviewSummaryData || {
+          averageRating: 0,
+          totalReviews: 0,
+          ratingCounts: {},
+        },
+      );
+
       setSelectedImage(getImageUrl(productData.image));
 
       setQuantity(1);
@@ -477,6 +690,11 @@ export default function ProductDetail() {
 
       setActiveFlashSaleProduct(null);
       setActivePromotion(null);
+      setReviewSummary({
+        averageRating: 0,
+        totalReviews: 0,
+        ratingCounts: {},
+      });
       setActivePromotions([]);
       setActiveFlashSales([]);
     }
@@ -754,7 +972,11 @@ export default function ProductDetail() {
             </div>
 
             <div className="product-meta">
-              <span>⭐ 4.9</span>
+              <span>
+                {totalReviews > 0
+                  ? `⭐ ${ratingText} • ${totalReviews} đánh giá`
+                  : "⭐ Chưa có đánh giá"}
+              </span>
 
               <span>
                 • Đã bán {displaySoldQuantity} • Còn lại {product?.stock || 0}
@@ -1158,66 +1380,120 @@ export default function ProductDetail() {
               </p>
             </div>
           )}
-          {activeTab === "reviews" && <ProductReviews productId={Number(id)} />}
+          {activeTab === "reviews" && product.id && (
+            <ProductReviews
+              productId={product.id}
+              onSummaryChange={setReviewSummary}
+            />
+          )}
         </div>
 
         {/* RELATED PRODUCTS */}
 
         {relatedProducts.length > 0 && (
           <div className="related-section">
-            <div className="section-header">
-              <h2>Sản phẩm tương tự</h2>
+            <div className="related-section-head">
+              <div className="section-header">
+                <h2>Sản phẩm tương tự</h2>
 
-              <p>Cùng danh mục, thương hiệu hoặc mức giá gần sản phẩm này</p>
+                <p>Cùng danh mục, thương hiệu hoặc mức giá gần sản phẩm này</p>
+              </div>
+
+              <div className="related-filter-tabs" role="tablist">
+                {RELATED_FILTERS.map((filter) => {
+                  const count = getRelatedFilterCount(filter.value);
+                  const isActive = relatedFilter === filter.value;
+
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      className={isActive ? "active" : ""}
+                      disabled={count === 0}
+                      onClick={() => handleRelatedFilterChange(filter.value)}
+                    >
+                      {filter.label}
+                      <span>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="slider-wrapper">
               {/* LEFT BUTTON */}
 
               <button
+                type="button"
+                aria-label="Xem sản phẩm tương tự phía trước"
                 className="slider-btn left"
-                onClick={() => {
-                  document.querySelector(".related-slider").scrollBy({
-                    left: -700,
-
-                    behavior: "smooth",
-                  });
-                }}
+                onClick={() => scrollRelatedProducts(-1)}
               >
                 ❮
               </button>
 
               {/* RELATED SLIDER */}
 
-              <div className="related-slider">
-                {relatedProducts.map((item) => (
-                  <HomeProductCard
-                    key={item.id}
-                    product={item}
-                    priceInfo={getRelatedPriceInfo(item)}
-                    onOpen={() => navigate(`/product/${item.id}`)}
-                  />
-                ))}
-              </div>
+              {filteredRelatedProducts.length > 0 ? (
+                <div
+                  className="related-slider"
+                  ref={relatedSliderRef}
+                  onScroll={updateRelatedScrollProgress}
+                >
+                  {filteredRelatedProducts.map((item) => {
+                    const reasonBadges = getRelatedReasonBadges(item);
+
+                    return (
+                      <div className="related-product-card-shell" key={item.id}>
+                        {reasonBadges.length > 0 && (
+                          <div className="related-reason-badges">
+                            {reasonBadges.map((badge) => (
+                              <span key={badge}>{badge}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        <HomeProductCard
+                          product={item}
+                          priceInfo={getRelatedPriceInfo(item)}
+                          onOpen={() => navigate(`/product/${item.id}`)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="related-empty-state">
+                  Chưa có sản phẩm phù hợp với bộ lọc này.
+                </div>
+              )}
 
               {/* RIGHT BUTTON */}
 
               <button
+                type="button"
+                aria-label="Xem thêm sản phẩm tương tự"
                 className="slider-btn right"
-                onClick={() => {
-                  document.querySelector(".related-slider").scrollBy({
-                    left: 700,
-
-                    behavior: "smooth",
-                  });
-                }}
+                onClick={() => scrollRelatedProducts(1)}
               >
                 ❯
               </button>
             </div>
+
+            {filteredRelatedProducts.length > 0 && (
+              <div className="related-carousel-progress" aria-hidden="true">
+                <span
+                  style={{
+                    width: `${Math.max(10, relatedScrollProgress)}%`,
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <Footer />
 
       {/* FULLSCREEN */}
 

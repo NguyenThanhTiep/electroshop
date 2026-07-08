@@ -96,6 +96,8 @@ export default function HomeProductCard({ product, priceInfo, onOpen }) {
         <img
           src={getImageUrl(product?.image)}
           alt={product?.name || "Sản phẩm"}
+          loading="lazy"
+          decoding="async"
           onError={(event) => {
             event.currentTarget.src = FALLBACK_IMAGE;
           }}

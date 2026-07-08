@@ -16,10 +16,111 @@ import { getActivePromotions } from "../services/promotionApi";
 
 import { getActiveFlashSale } from "../services/flashSaleApi";
 
+const SEARCH_PAGE_SIZE = 12;
+
+const SEARCH_CACHE_TTL = 5 * 60 * 1000;
+
+const SEARCH_DATA_CACHE_KEY = "electroshop.searchPage.data.v1";
+
+const SEARCH_BANNER_CACHE_PREFIX = "electroshop.searchPage.banner.";
+
+const PRICE_FILTERS = [
+  {
+    label: "Dưới 15 triệu",
+    minPrice: "",
+    maxPrice: "15000000",
+  },
+  {
+    label: "15 - 25 triệu",
+    minPrice: "15000000",
+    maxPrice: "25000000",
+  },
+  {
+    label: "25 - 40 triệu",
+    minPrice: "25000000",
+    maxPrice: "40000000",
+  },
+  {
+    label: "Trên 40 triệu",
+    minPrice: "40000000",
+    maxPrice: "",
+  },
+];
+
+const readTimedCache = (key) => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawCache = window.sessionStorage.getItem(key);
+
+    if (!rawCache) {
+      return null;
+    }
+
+    const parsedCache = JSON.parse(rawCache);
+
+    if (
+      !parsedCache?.cachedAt ||
+      Date.now() - Number(parsedCache.cachedAt) > SEARCH_CACHE_TTL
+    ) {
+      window.sessionStorage.removeItem(key);
+
+      return null;
+    }
+
+    return parsedCache.data || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const writeTimedCache = (key, data) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      key,
+      JSON.stringify({
+        cachedAt: Date.now(),
+        data,
+      }),
+    );
+  } catch (error) {
+    // Ignore storage quota or private-mode errors.
+  }
+};
+
+const normalizeSearchData = (data) => ({
+  products: Array.isArray(data?.products) ? data.products : [],
+  activePromotions: Array.isArray(data?.activePromotions)
+    ? data.activePromotions
+    : [],
+  activeFlashSale: data?.activeFlashSale || null,
+});
+
+const normalizeBannerDetail = (detail) => ({
+  banner: detail?.banner || null,
+  products: Array.isArray(detail?.products) ? detail.products : [],
+});
+
 export default function SearchPage() {
   const [searchParams] = useSearchParams();
 
   const navigate = useNavigate();
+
+  const cachedInitialSearchData = useMemo(
+    () => readTimedCache(SEARCH_DATA_CACHE_KEY),
+    [],
+  );
+
+  const initialSearchData = useMemo(
+    () => normalizeSearchData(cachedInitialSearchData),
+    [cachedInitialSearchData],
+  );
 
   const pageParam = searchParams.get("page") || "";
 
@@ -41,37 +142,90 @@ export default function SearchPage() {
 
   const productIdsParam = searchParams.get("productIds") || "";
 
-  const [products, setProducts] = useState([]);
+  const dealParam = searchParams.get("deal") || "";
+
+  const stockParam = searchParams.get("stock") || "";
+
+  const [products, setProducts] = useState(initialSearchData.products);
 
   const [bannerInfo, setBannerInfo] = useState(null);
 
   const [bannerProducts, setBannerProducts] = useState([]);
 
-  const [activePromotions, setActivePromotions] = useState([]);
+  const [activePromotions, setActivePromotions] = useState(
+    initialSearchData.activePromotions,
+  );
 
-  const [activeFlashSale, setActiveFlashSale] = useState(null);
+  const [activeFlashSale, setActiveFlashSale] = useState(
+    initialSearchData.activeFlashSale,
+  );
 
   const [loadingBanner, setLoadingBanner] = useState(false);
 
+  const [loadingProducts, setLoadingProducts] = useState(
+    !cachedInitialSearchData,
+  );
+
+  const [visibleProductCount, setVisibleProductCount] =
+    useState(SEARCH_PAGE_SIZE);
+
   useEffect(() => {
-    fetchProducts();
-    fetchActivePromotions();
-    fetchActiveFlashSale();
+    loadInitialSearchData();
   }, []);
 
   useEffect(() => {
     fetchBannerProducts(bannerIdParam);
   }, [bannerIdParam]);
 
-  const fetchProducts = async () => {
-    try {
-      const data = await getProducts();
+  const loadInitialSearchData = async () => {
+    const cachedData = readTimedCache(SEARCH_DATA_CACHE_KEY);
 
-      setProducts(Array.isArray(data) ? data : []);
+    if (cachedData) {
+      const normalizedCache = normalizeSearchData(cachedData);
+
+      setProducts(normalizedCache.products);
+
+      setActivePromotions(normalizedCache.activePromotions);
+
+      setActiveFlashSale(normalizedCache.activeFlashSale);
+
+      setLoadingProducts(false);
+    } else {
+      setLoadingProducts(true);
+    }
+
+    try {
+      const [productData, promotionData, flashSaleData] = await Promise.all([
+        getProducts(),
+        getActivePromotions(),
+        getActiveFlashSale(),
+      ]);
+
+      const normalizedData = normalizeSearchData({
+        products: productData,
+        activePromotions: promotionData,
+        activeFlashSale: flashSaleData,
+      });
+
+      setProducts(normalizedData.products);
+
+      setActivePromotions(normalizedData.activePromotions);
+
+      setActiveFlashSale(normalizedData.activeFlashSale);
+
+      writeTimedCache(SEARCH_DATA_CACHE_KEY, normalizedData);
     } catch (error) {
       console.log(error);
 
-      setProducts([]);
+      if (!cachedData) {
+        setProducts([]);
+
+        setActivePromotions([]);
+
+        setActiveFlashSale(null);
+      }
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -82,45 +236,41 @@ export default function SearchPage() {
       return;
     }
 
-    try {
-      setLoadingBanner(true);
+    const cacheKey = `${SEARCH_BANNER_CACHE_PREFIX}${bannerId}`;
 
+    const cachedDetail = readTimedCache(cacheKey);
+
+    if (cachedDetail) {
+      const normalizedCache = normalizeBannerDetail(cachedDetail);
+
+      setBannerInfo(normalizedCache.banner);
+
+      setBannerProducts(normalizedCache.products);
+
+      setLoadingBanner(false);
+    } else {
+      setLoadingBanner(true);
+    }
+
+    try {
       const detail = await getSectionBannerDetail(bannerId);
 
-      setBannerInfo(detail?.banner || null);
+      const normalizedDetail = normalizeBannerDetail(detail);
 
-      setBannerProducts(Array.isArray(detail?.products) ? detail.products : []);
+      setBannerInfo(normalizedDetail.banner);
+
+      setBannerProducts(normalizedDetail.products);
+
+      writeTimedCache(cacheKey, normalizedDetail);
     } catch (error) {
       console.log(error);
 
-      setBannerInfo(null);
-      setBannerProducts([]);
+      if (!cachedDetail) {
+        setBannerInfo(null);
+        setBannerProducts([]);
+      }
     } finally {
       setLoadingBanner(false);
-    }
-  };
-
-  const fetchActivePromotions = async () => {
-    try {
-      const data = await getActivePromotions();
-
-      setActivePromotions(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.log(error);
-
-      setActivePromotions([]);
-    }
-  };
-
-  const fetchActiveFlashSale = async () => {
-    try {
-      const data = await getActiveFlashSale();
-
-      setActiveFlashSale(data || null);
-    } catch (error) {
-      console.log(error);
-
-      setActiveFlashSale(null);
     }
   };
 
@@ -177,17 +327,15 @@ export default function SearchPage() {
     });
   };
 
-  const getPromotionForProduct = (productId) => {
+  const activePromotionByProductId = useMemo(() => {
     const today = new Date();
 
-    return activePromotions.find((promotion) => {
+    return activePromotions.reduce((promotionMap, promotion) => {
       if (!promotion.active) {
-        return false;
+        return promotionMap;
       }
 
-      if (Number(promotion.productId) !== Number(productId)) {
-        return false;
-      }
+      const productId = Number(promotion.productId);
 
       const startDate = promotion.startDate
         ? new Date(promotion.startDate)
@@ -196,15 +344,50 @@ export default function SearchPage() {
       const endDate = promotion.endDate ? new Date(promotion.endDate) : null;
 
       if (startDate && today < startDate) {
-        return false;
+        return promotionMap;
       }
 
       if (endDate && today > endDate) {
-        return false;
+        return promotionMap;
       }
 
-      return true;
-    });
+      if (!promotionMap.has(productId)) {
+        promotionMap.set(productId, promotion);
+      }
+
+      return promotionMap;
+    }, new Map());
+  }, [activePromotions]);
+
+  const activeFlashSaleItemByProductId = useMemo(() => {
+    return (activeFlashSale?.items || []).reduce((flashSaleMap, item) => {
+      const salePrice = Number(item.salePrice || 0);
+
+      const originalPrice = Number(item.originalPrice || 0);
+
+      const saleQuantity = Number(item.saleQuantity || 0);
+
+      const soldQuantity = Number(item.soldQuantity || 0);
+
+      const remainingQuantity = Math.max(0, saleQuantity - soldQuantity);
+
+      if (
+        salePrice <= 0 ||
+        originalPrice <= 0 ||
+        salePrice >= originalPrice ||
+        remainingQuantity <= 0
+      ) {
+        return flashSaleMap;
+      }
+
+      flashSaleMap.set(Number(item.productId), item);
+
+      return flashSaleMap;
+    }, new Map());
+  }, [activeFlashSale]);
+
+  const getPromotionForProduct = (productId) => {
+    return activePromotionByProductId.get(Number(productId)) || null;
   };
 
   const getDiscountPrice = (price, discountPercent) => {
@@ -214,34 +397,7 @@ export default function SearchPage() {
   };
 
   const getFlashSaleItemForProduct = (productId) => {
-    const item = activeFlashSale?.items?.find(
-      (flashItem) => Number(flashItem.productId) === Number(productId),
-    );
-
-    if (!item) {
-      return null;
-    }
-
-    const salePrice = Number(item.salePrice || 0);
-
-    const originalPrice = Number(item.originalPrice || 0);
-
-    const saleQuantity = Number(item.saleQuantity || 0);
-
-    const soldQuantity = Number(item.soldQuantity || 0);
-
-    const remainingQuantity = Math.max(0, saleQuantity - soldQuantity);
-
-    if (
-      salePrice <= 0 ||
-      originalPrice <= 0 ||
-      salePrice >= originalPrice ||
-      remainingQuantity <= 0
-    ) {
-      return null;
-    }
-
-    return item;
+    return activeFlashSaleItemByProductId.get(Number(productId)) || null;
   };
 
   const getEffectiveSearchPrice = (product) => {
@@ -364,6 +520,26 @@ export default function SearchPage() {
         );
       }
 
+      if (dealParam === "flash-sale") {
+        result = result.filter((product) =>
+          Boolean(getFlashSaleItemForProduct(product.id)),
+        );
+      } else if (dealParam === "promotion") {
+        result = result.filter((product) =>
+          Boolean(getPromotionForProduct(product.id)),
+        );
+      } else if (dealParam === "active") {
+        result = result.filter((product) => {
+          const priceInfo = getEffectiveSearchPrice(product);
+
+          return priceInfo.priceSource !== "REGULAR";
+        });
+      }
+
+      if (stockParam === "in-stock") {
+        result = result.filter((product) => Number(product.stock || 0) > 0);
+      }
+
       if (sortParam === "price-asc") {
         result.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
       }
@@ -374,6 +550,14 @@ export default function SearchPage() {
 
       if (sortParam === "newest") {
         result.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+      }
+
+      if (sortParam === "sold-desc") {
+        result.sort(
+          (a, b) =>
+            Number(b.soldQuantity || b.sold || 0) -
+            Number(a.soldQuantity || a.sold || 0),
+        );
       }
 
       return result;
@@ -407,12 +591,282 @@ export default function SearchPage() {
     sortParam,
     bannerIdParam,
     productIdsParam,
+    dealParam,
+    stockParam,
     isPromotionPage,
     activePromotions,
     activeFlashSale,
   ]);
 
   const displayedProducts = bannerIdParam ? bannerProducts : searchResults;
+
+  const isSearchLoading =
+    loadingProducts || Boolean(bannerIdParam && loadingBanner);
+
+  const visibleProducts = displayedProducts.slice(0, visibleProductCount);
+
+  const hasMoreProducts = visibleProductCount < displayedProducts.length;
+
+  useEffect(() => {
+    setVisibleProductCount(SEARCH_PAGE_SIZE);
+  }, [
+    keyword,
+    categoryParam,
+    brandParam,
+    minPriceParam,
+    maxPriceParam,
+    sortParam,
+    bannerIdParam,
+    productIdsParam,
+    dealParam,
+    stockParam,
+    pageParam,
+  ]);
+
+  const selectedProductIds = productIdsParam
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id !== "");
+
+  const searchModeClass = bannerIdParam
+    ? "banner-search-page"
+    : productIdsParam
+      ? "collection-search-page"
+      : isPromotionPage
+        ? "promotion-search-page"
+        : "standard-search-page";
+
+  const updateSearchParams = (updates) => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === "" || value === null || value === undefined) {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, value);
+      }
+    });
+
+    const nextQuery = nextParams.toString();
+
+    navigate(nextQuery ? `/search?${nextQuery}` : "/search");
+  };
+
+  const handleSortChange = (event) => {
+    updateSearchParams({
+      sort: event.target.value,
+    });
+  };
+
+  const handlePriceFilterChange = (filter) => {
+    updateSearchParams({
+      minPrice: filter.minPrice,
+      maxPrice: filter.maxPrice,
+    });
+  };
+
+  const clearCategoryFilters = () => {
+    updateSearchParams({
+      brand: "",
+      minPrice: "",
+      maxPrice: "",
+      sort: "",
+      deal: "",
+      stock: "",
+    });
+  };
+
+  const filterChips = [
+    keyword && `Từ khóa: ${keyword}`,
+    categoryParam && `Danh mục: ${categoryParam}`,
+    brandParam && `Thương hiệu: ${brandParam}`,
+    minPriceParam && `Từ ${Number(minPriceParam).toLocaleString("vi-VN")}đ`,
+    maxPriceParam && `Đến ${Number(maxPriceParam).toLocaleString("vi-VN")}đ`,
+    dealParam === "flash-sale" && "Flash Sale",
+    dealParam === "promotion" && "Giảm giá thường",
+    dealParam === "active" && "Đang giảm giá",
+    stockParam === "in-stock" && "Còn hàng",
+    productIdsParam && `Gợi ý chọn lọc: ${selectedProductIds.length}`,
+    bannerIdParam && (bannerInfo?.title || "Bộ sưu tập banner"),
+    isPromotionPage && "Đang khuyến mãi",
+  ].filter(Boolean);
+
+  const searchHeroStats = useMemo(() => {
+    const flashSaleCount = displayedProducts.filter((product) =>
+      activeFlashSaleItemByProductId.has(Number(product.id)),
+    ).length;
+
+    const dealCount = displayedProducts.filter((product) => {
+      const productId = Number(product.id);
+
+      return (
+        activeFlashSaleItemByProductId.has(productId) ||
+        activePromotionByProductId.has(productId)
+      );
+    }).length;
+
+    const inStockCount = displayedProducts.filter(
+      (product) => Number(product.stock || 0) > 0,
+    ).length;
+
+    const brandCount = new Set(
+      displayedProducts
+        .map((product) => String(product.brand || "").trim())
+        .filter(Boolean),
+    ).size;
+
+    return [
+      {
+        key: "deal",
+        label: "Đang ưu đãi",
+        value: dealCount,
+      },
+      {
+        key: "flash",
+        label: "Flash Sale",
+        value: flashSaleCount,
+      },
+      {
+        key: "stock",
+        label: "Còn hàng",
+        value: inStockCount,
+      },
+      {
+        key: "brand",
+        label: "Thương hiệu",
+        value: brandCount,
+      },
+    ];
+  }, [
+    displayedProducts,
+    activeFlashSaleItemByProductId,
+    activePromotionByProductId,
+  ]);
+
+  const showSearchSidebar = !bannerIdParam && !productIdsParam;
+
+  const sidebarBaseProducts = useMemo(() => {
+    return products.filter((product) => {
+      const text = normalizeText(keyword);
+
+      if (text) {
+        const name = normalizeText(product.name);
+        const productCategory = normalizeText(product.category);
+        const productBrand = normalizeText(product.brand);
+
+        if (
+          !name.includes(text) &&
+          !productCategory.includes(text) &&
+          !productBrand.includes(text)
+        ) {
+          return false;
+        }
+      }
+
+      if (categoryParam) {
+        return matchesFilterText(
+          product.category,
+          categoryParam,
+          CATEGORY_ALIASES,
+        );
+      }
+
+      return true;
+    });
+  }, [products, keyword, categoryParam]);
+
+  const availableBrands = useMemo(() => {
+    const brandCounts = new Map();
+
+    sidebarBaseProducts.forEach((product) => {
+      const brand = String(product.brand || "").trim();
+
+      if (!brand) {
+        return;
+      }
+
+      brandCounts.set(brand, (brandCounts.get(brand) || 0) + 1);
+    });
+
+    return Array.from(brandCounts.entries())
+      .map(([name, count]) => ({
+        name,
+        count,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [sidebarBaseProducts]);
+
+  const smartSectionCards = useMemo(() => {
+    const flashSaleCount = displayedProducts.filter((product) =>
+      Boolean(getFlashSaleItemForProduct(product.id)),
+    ).length;
+
+    const dealCount = displayedProducts.filter((product) => {
+      const priceInfo = getEffectiveSearchPrice(product);
+
+      return priceInfo.priceSource !== "REGULAR";
+    }).length;
+
+    const bestSellerCount = displayedProducts.filter(
+      (product) => Number(product.soldQuantity || product.sold || 0) > 0,
+    ).length;
+
+    return [
+      {
+        key: "all",
+        title: "Tất cả sản phẩm",
+        description: "Xem toàn bộ kết quả phù hợp",
+        count: displayedProducts.length,
+        active: !dealParam && !stockParam && sortParam !== "sold-desc",
+        onClick: () =>
+          updateSearchParams({
+            deal: "",
+            stock: "",
+            sort: "",
+          }),
+      },
+      {
+        key: "flash",
+        title: "Đang Flash Sale",
+        description: "Ưu tiên sản phẩm có giá sốc",
+        count: flashSaleCount,
+        active: dealParam === "flash-sale",
+        onClick: () =>
+          updateSearchParams({
+            deal: "flash-sale",
+          }),
+      },
+      {
+        key: "best-seller",
+        title: "Bán chạy",
+        description: "Sắp xếp theo số lượng đã bán",
+        count: bestSellerCount,
+        active: sortParam === "sold-desc",
+        onClick: () =>
+          updateSearchParams({
+            sort: "sold-desc",
+          }),
+      },
+      {
+        key: "good-price",
+        title: "Giá tốt",
+        description: "Sản phẩm đang có ưu đãi",
+        count: dealCount,
+        active: dealParam === "active",
+        onClick: () =>
+          updateSearchParams({
+            deal: "active",
+          }),
+      },
+    ];
+  }, [
+    displayedProducts,
+    activeFlashSale,
+    activePromotions,
+    dealParam,
+    stockParam,
+    sortParam,
+  ]);
 
   const getResultDescription = () => {
     if (bannerIdParam) {
@@ -438,7 +892,9 @@ export default function SearchPage() {
       brandParam ||
       minPriceParam ||
       maxPriceParam ||
-      sortParam
+      sortParam ||
+      dealParam ||
+      stockParam
     ) {
       return (
         <>
@@ -491,11 +947,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div
-      className={
-        bannerIdParam ? "search-page banner-search-page" : "search-page"
-      }
-    >
+    <div className={`search-page ${searchModeClass}`}>
       <Header />
 
       <div className="search-breadcrumb">
@@ -512,68 +964,321 @@ export default function SearchPage() {
         </strong>
       </div>
 
-      {bannerIdParam && bannerInfo?.imageUrl && (
-        <div className="search-banner-hero">
-          <img
-            src={bannerInfo.imageUrl}
-            alt={bannerInfo.title || "Banner khuyến mãi"}
-          />
-        </div>
+      {bannerIdParam && loadingBanner && (
+        <section className="search-banner-hero search-banner-loading">
+          <div className="search-skeleton-line wide"></div>
+          <div className="search-skeleton-line medium"></div>
+          <div className="search-skeleton-line short"></div>
+        </section>
+      )}
+
+      {bannerIdParam && !loadingBanner && (
+        <section className="search-banner-hero">
+          {bannerInfo?.imageUrl && (
+            <img
+              src={bannerInfo.imageUrl}
+              alt={bannerInfo.title || "Banner khuyến mãi"}
+            />
+          )}
+        </section>
       )}
 
       <section className="search-result-wrapper">
         <div className="search-result-title">
           <div className="search-result-title-left">
-            <span className="search-result-badge">
-              {bannerIdParam ? "Bộ sưu tập nổi bật" : "Kết quả tìm kiếm"}
-            </span>
+            <div className="search-result-kicker-row">
+              <span className="search-result-badge">
+              {bannerIdParam
+                ? "Bộ sưu tập nổi bật"
+                : productIdsParam
+                  ? "Collection từ ElectroShop"
+                  : "Kết quả tìm kiếm"}
+              </span>
+
+              {filterChips.length > 0 && (
+                <span className="search-result-filter-count">
+                  {filterChips.length} bộ lọc đang áp dụng
+                </span>
+              )}
+            </div>
 
             <h2>{getPageTitle()}</h2>
 
             <p>{getPageSubtitle()}</p>
+
+            {!isSearchLoading && displayedProducts.length > 0 && (
+              <div className="search-result-stats">
+                {searchHeroStats.map((stat) => (
+                  <span className="search-result-stat" key={stat.key}>
+                    <strong>{stat.value}</strong>
+                    <small>{stat.label}</small>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="search-result-title-right">
             <span className="search-result-count">
-              {displayedProducts.length} sản phẩm
+              {isSearchLoading
+                ? "Đang tải sản phẩm"
+                : `${displayedProducts.length} sản phẩm`}
             </span>
+
+            {!isSearchLoading && displayedProducts.length > 0 && (
+              <a className="search-result-jump" href="#search-products">
+                Xem danh sách
+              </a>
+            )}
           </div>
         </div>
 
-        {loadingBanner ? (
-          <div className="search-empty-page">
-            <div className="search-empty-icon">⏳</div>
+        <div className="search-filter-bar">
+          <div className="search-filter-summary">
+            <strong>
+              {isSearchLoading
+                ? "Đang tải danh sách sản phẩm..."
+                : `Đang hiển thị ${visibleProducts.length} / ${displayedProducts.length} sản phẩm`}
+            </strong>
 
-            <h3>Đang tải sản phẩm...</h3>
+            <div className="search-filter-chips">
+              {filterChips.length > 0 ? (
+                filterChips.map((chip) => <span key={chip}>{chip}</span>)
+              ) : (
+                <span>Tất cả sản phẩm</span>
+              )}
+            </div>
           </div>
-        ) : displayedProducts.length > 0 ? (
-          <div className="search-product-grid">
-            {displayedProducts.map((product) => {
-              const priceInfo = getEffectiveSearchPrice(product);
 
-              return (
-                <HomeProductCard
-                  key={product.id}
-                  product={product}
-                  priceInfo={priceInfo}
-                  onOpen={() => navigate(`/product/${product.id}`)}
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="search-empty-page">
-            <div className="search-empty-icon">🔍</div>
+          <label className="search-sort-select">
+            <span>Sắp xếp</span>
 
-            <h3>Không tìm thấy sản phẩm phù hợp</h3>
+            <select value={sortParam} onChange={handleSortChange}>
+              <option value="">Mặc định</option>
+              <option value="newest">Mới nhất</option>
+              <option value="price-asc">Giá tăng dần</option>
+              <option value="price-desc">Giá giảm dần</option>
+              <option value="sold-desc">Bán chạy</option>
+            </select>
+          </label>
+        </div>
 
-            <p>
-              {bannerIdParam
-                ? "Banner này chưa được gắn sản phẩm. Hãy vào Admin → Trang chủ → Quản lý banner để chọn sản phẩm."
-                : "Hãy thử tìm bằng tên sản phẩm, danh mục, thương hiệu hoặc khoảng giá khác."}
-            </p>
+        {showSearchSidebar && !isSearchLoading && displayedProducts.length > 0 && (
+          <div className="search-smart-sections">
+            {smartSectionCards.map((section) => (
+              <button
+                key={section.key}
+                type="button"
+                className={section.active ? "active" : ""}
+                disabled={section.count === 0}
+                onClick={section.onClick}
+              >
+                <span>{section.title}</span>
+                <strong>{section.count}</strong>
+                <small>{section.description}</small>
+              </button>
+            ))}
           </div>
         )}
+
+        <div
+          className={
+            showSearchSidebar
+              ? "search-content-layout has-sidebar"
+              : "search-content-layout"
+          }
+        >
+          {showSearchSidebar && (
+            <aside className="search-filter-sidebar">
+              <div className="search-sidebar-head">
+                <strong>Bộ lọc sản phẩm</strong>
+                <button type="button" onClick={clearCategoryFilters}>
+                  Xóa lọc
+                </button>
+              </div>
+
+              <div className="search-sidebar-group">
+                <h3>Thương hiệu</h3>
+
+                <div className="search-sidebar-options">
+                  {availableBrands.length > 0 ? (
+                    availableBrands.map((brand) => (
+                      <button
+                        key={brand.name}
+                        type="button"
+                        className={brandParam === brand.name ? "active" : ""}
+                        onClick={() =>
+                          updateSearchParams({
+                            brand: brandParam === brand.name ? "" : brand.name,
+                          })
+                        }
+                      >
+                        <span>{brand.name}</span>
+                        <small>{brand.count}</small>
+                      </button>
+                    ))
+                  ) : (
+                    <p>Chưa có thương hiệu phù hợp</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="search-sidebar-group">
+                <h3>Khoảng giá</h3>
+
+                <div className="search-sidebar-options">
+                  {PRICE_FILTERS.map((filter) => {
+                    const isActive =
+                      minPriceParam === filter.minPrice &&
+                      maxPriceParam === filter.maxPrice;
+
+                    return (
+                      <button
+                        key={filter.label}
+                        type="button"
+                        className={isActive ? "active" : ""}
+                        onClick={() =>
+                          isActive
+                            ? updateSearchParams({
+                                minPrice: "",
+                                maxPrice: "",
+                              })
+                            : handlePriceFilterChange(filter)
+                        }
+                      >
+                        <span>{filter.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="search-sidebar-group">
+                <h3>Ưu tiên hiển thị</h3>
+
+                <div className="search-sidebar-options">
+                  <button
+                    type="button"
+                    className={dealParam === "active" ? "active" : ""}
+                    onClick={() =>
+                      updateSearchParams({
+                        deal: dealParam === "active" ? "" : "active",
+                      })
+                    }
+                  >
+                    <span>Đang giảm giá</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={dealParam === "flash-sale" ? "active" : ""}
+                    onClick={() =>
+                      updateSearchParams({
+                        deal:
+                          dealParam === "flash-sale" ? "" : "flash-sale",
+                      })
+                    }
+                  >
+                    <span>Flash Sale</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={stockParam === "in-stock" ? "active" : ""}
+                    onClick={() =>
+                      updateSearchParams({
+                        stock:
+                          stockParam === "in-stock" ? "" : "in-stock",
+                      })
+                    }
+                  >
+                    <span>Còn hàng</span>
+                  </button>
+                </div>
+              </div>
+            </aside>
+          )}
+
+          <div className="search-products-area">
+            {isSearchLoading ? (
+              <div className="search-loading-grid">
+                {Array.from({ length: SEARCH_PAGE_SIZE }).map((_, index) => (
+                  <div className="search-product-skeleton" key={index}>
+                    <div></div>
+                    <span></span>
+                    <strong></strong>
+                    <small></small>
+                  </div>
+                ))}
+              </div>
+            ) : displayedProducts.length > 0 ? (
+              <>
+                <div className="search-product-grid" id="search-products">
+                  {visibleProducts.map((product) => {
+                    const priceInfo = getEffectiveSearchPrice(product);
+
+                    return (
+                      <HomeProductCard
+                        key={product.id}
+                        product={product}
+                        priceInfo={priceInfo}
+                        onOpen={() => navigate(`/product/${product.id}`)}
+                      />
+                    );
+                  })}
+                </div>
+
+                {hasMoreProducts && (
+                  <div className="search-load-more">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleProductCount((current) =>
+                          Math.min(
+                            current + SEARCH_PAGE_SIZE,
+                            displayedProducts.length,
+                          ),
+                        )
+                      }
+                    >
+                      Xem thêm{" "}
+                      {Math.min(
+                        SEARCH_PAGE_SIZE,
+                        displayedProducts.length - visibleProductCount,
+                      )}{" "}
+                      sản phẩm
+                    </button>
+
+                    <span>
+                      Còn {displayedProducts.length - visibleProductCount} sản
+                      phẩm chưa hiển thị
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="search-empty-page">
+                <div className="search-empty-icon">🔍</div>
+
+                <h3>Không tìm thấy sản phẩm phù hợp</h3>
+
+                <p>
+                  {bannerIdParam
+                    ? "Banner này chưa được gắn sản phẩm. Hãy vào Admin → Trang chủ → Quản lý banner để chọn sản phẩm."
+                    : "Hãy thử tìm bằng tên sản phẩm, danh mục, thương hiệu hoặc khoảng giá khác."}
+                </p>
+
+                <div className="search-empty-actions">
+                  <Link to="/">Về trang chủ</Link>
+
+                  {!bannerIdParam && (
+                    <Link to="/search?page=promotion">Xem khuyến mãi</Link>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       <Footer />
