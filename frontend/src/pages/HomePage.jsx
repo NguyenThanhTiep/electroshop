@@ -5,6 +5,7 @@ import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
 import Sidebar from "../components/Sidebar";
 import HomeProductCard from "../components/home/HomeProductCard";
+import { useToast } from "../components/common/ToastProvider";
 import { useEffect, useRef, useMemo, useState } from "react";
 
 import { useLocation } from "react-router-dom";
@@ -395,6 +396,8 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
 }
 
 export default function HomePage() {
+  const toast = useToast();
+
   const navigate = useNavigate();
 
   const [banners, setBanners] = useState([]);
@@ -1047,11 +1050,11 @@ export default function HomePage() {
     try {
       await navigator.clipboard.writeText(code);
 
-      alert(`Đã sao chép mã ${code}`);
+      toast.success(`Đã sao chép mã ${code}`);
     } catch (error) {
       console.log(error);
 
-      alert("Không thể sao chép mã");
+      toast.error("Không thể sao chép mã");
     }
   };
 

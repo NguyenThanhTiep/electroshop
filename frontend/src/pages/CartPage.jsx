@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
+import { useToast } from "../components/common/ToastProvider";
+
 import {
   getCart,
   removeFromCart,
@@ -15,6 +17,8 @@ import {
 import { applyCoupon } from "../services/couponApi";
 
 export default function CartPage() {
+  const toast = useToast();
+
   const navigate = useNavigate();
 
   const [cartItems, setCartItems] = useState([]);
@@ -252,7 +256,7 @@ export default function CartPage() {
 
   const handleGoToCheckout = () => {
     if (selectedCartKeys.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán");
+      toast.warning("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán");
       return;
     }
 

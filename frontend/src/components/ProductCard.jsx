@@ -4,7 +4,11 @@ import { getImageUrl } from "../utils/imageUtils";
 
 import { addToCart } from "../utils/cartUtils";
 
+import { useToast } from "./common/ToastProvider";
+
 export default function ProductCard({ product }) {
+  const toast = useToast();
+
   return (
     <Link to={`/product/${product.id}`} className="product-link">
       <div className="product-card">
@@ -17,10 +21,7 @@ export default function ProductCard({ product }) {
 
             addToCart(product);
 
-            alert(
-              `${product.name}
-đã thêm vào giỏ hàng`,
-            );
+            toast.success(`Đã thêm ${product.name} vào giỏ hàng`);
           }}
         >
           +

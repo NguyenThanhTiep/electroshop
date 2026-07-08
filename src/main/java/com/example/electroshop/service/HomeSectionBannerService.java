@@ -212,6 +212,7 @@ public class HomeSectionBannerService {
         List<Long> productIds =
                 bannerProducts
                         .stream()
+                        .filter(Objects::nonNull)
                         .map(HomeBannerProduct::getProductId)
                         .filter(Objects::nonNull)
                         .toList();
@@ -226,6 +227,8 @@ public class HomeSectionBannerService {
         Map<Long, Product> productMap =
                 products
                         .stream()
+                        .filter(Objects::nonNull)
+                        .filter(product -> product.getId() != null)
                         .collect(
                                 Collectors.toMap(
                                         Product::getId,

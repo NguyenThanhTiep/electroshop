@@ -1,6 +1,7 @@
 package com.example.electroshop.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -29,6 +30,8 @@ public class User {
 
     @Column(nullable = false)
     private Boolean locked = false;
+
+    private LocalDateTime createdAt;
 
     public User() {
     }
@@ -162,12 +165,29 @@ public class User {
         this.locked = locked;
     }
 
+    public LocalDateTime getCreatedAt() {
+
+        return createdAt;
+    }
+
+    public void setCreatedAt(
+            LocalDateTime createdAt
+    ) {
+
+        this.createdAt = createdAt;
+    }
+
     @PrePersist
     public void prePersist() {
 
         if (locked == null) {
 
             locked = false;
+        }
+
+        if (createdAt == null) {
+
+            createdAt = LocalDateTime.now();
         }
     }
 }

@@ -39,7 +39,7 @@ import {
   deleteBrand,
 } from "../services/brandApi";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { uploadImage } from "../services/uploadApi";
 
@@ -173,6 +173,12 @@ const ADMIN_MENU_INFO = {
   },
 };
 
+const ADMIN_MENU_KEYS = Object.keys(ADMIN_MENU_INFO);
+
+const getValidAdminMenu = (menu) => {
+  return ADMIN_MENU_KEYS.includes(menu) ? menu : "overview";
+};
+
 /*
  * Các trạng thái mà Admin
  * được phép chuyển tiếp.
@@ -234,6 +240,7 @@ const getOrderItemOptions = (selectedOptions) => {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
 
   const productImageUploadRef = useRef(null);
@@ -346,7 +353,28 @@ export default function AdminDashboard() {
     slideInterval: 4000,
   });
 
-  const [activeMenu, setActiveMenu] = useState("overview");
+  const [activeMenu, setActiveMenu] = useState(() =>
+    getValidAdminMenu(searchParams.get("tab")),
+  );
+
+  useEffect(() => {
+    const menuFromUrl = getValidAdminMenu(searchParams.get("tab"));
+
+    if (menuFromUrl !== activeMenu) {
+      setActiveMenu(menuFromUrl);
+    }
+  }, [activeMenu, searchParams]);
+
+  const handleOpenAdminMenu = (menu, options = {}) => {
+    const nextMenu = getValidAdminMenu(menu);
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.set("tab", nextMenu);
+    setActiveMenu(nextMenu);
+    setSearchParams(nextSearchParams, {
+      replace: Boolean(options.replace),
+    });
+  };
 
   const [brands, setBrands] = useState([]);
 
@@ -801,7 +829,7 @@ export default function AdminDashboard() {
     );
 
     if (isDuplicatedCategory) {
-      alert("Tên danh mục đã tồn tại");
+      toast.warning("Tên danh mục đã tồn tại");
 
       return;
     }
@@ -852,13 +880,13 @@ export default function AdminDashboard() {
     e.preventDefault();
 
     if (!brandCategory) {
-      alert("Vui lòng chọn danh mục cho thương hiệu");
+      toast.warning("Vui lòng chọn danh mục cho thương hiệu");
 
       return;
     }
 
     if (!brandName.trim()) {
-      alert("Vui lòng nhập tên thương hiệu");
+      toast.warning("Vui lòng nhập tên thương hiệu");
 
       return;
     }
@@ -871,7 +899,7 @@ export default function AdminDashboard() {
     );
 
     if (isDuplicatedBrand) {
-      alert("Thương hiệu này đã tồn tại trong danh mục đã chọn");
+      toast.warning("Thương hiệu này đã tồn tại trong danh mục đã chọn");
 
       return;
     }
@@ -883,14 +911,14 @@ export default function AdminDashboard() {
           category: brandCategory,
         });
 
-        alert("Cập nhật thương hiệu thành công");
+        toast.success("Cập nhật thương hiệu thành công");
       } else {
         await createBrand({
           name: brandName,
           category: brandCategory,
         });
 
-        alert("Thêm thương hiệu thành công");
+        toast.success("Thêm thương hiệu thành công");
       }
 
       setBrandName("");
@@ -903,7 +931,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert("Lỗi khi lưu thương hiệu");
+      toast.error("Lỗi khi lưu thương hiệu");
     }
   };
 
@@ -927,11 +955,11 @@ export default function AdminDashboard() {
 
       fetchBrands();
 
-      alert("Xóa thương hiệu thành công");
+      toast.success("Xóa thương hiệu thành công");
     } catch (error) {
       console.log(error);
 
-      alert("Không thể xóa thương hiệu này");
+      toast.error("Không thể xóa thương hiệu này");
     }
   };
 
@@ -977,7 +1005,7 @@ export default function AdminDashboard() {
 
       console.error("Chi tiết lỗi:", error);
 
-      alert(error.response?.data || "Không thể upload ảnh");
+      toast.error(getApiErrorMessage(error, "Không thể upload ảnh"));
     }
   };
 
@@ -1021,7 +1049,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error(error);
 
-      alert(error.response?.data || "Không thể upload ảnh");
+      toast.error(getApiErrorMessage(error, "Không thể upload ảnh"));
     }
   };
 
@@ -1037,7 +1065,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
           error.response?.data ||
           "Không thể tải lại danh sách đơn hàng",
@@ -1066,7 +1094,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert("Không thể tải danh sách người dùng");
+      toast.error("Không thể tải danh sách người dùng");
     }
   };
 
@@ -1088,11 +1116,11 @@ export default function AdminDashboard() {
 
       await fetchUsers();
 
-      alert(nextLocked ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản");
+      toast.success(nextLocked ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản");
     } catch (error) {
       console.log(error);
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
           error.response?.data ||
           "Thao tác thất bại",
@@ -1114,11 +1142,11 @@ export default function AdminDashboard() {
 
       await fetchUsers();
 
-      alert("Xóa người dùng thành công");
+      toast.success("Xóa người dùng thành công");
     } catch (error) {
       console.log(error);
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
           error.response?.data ||
           "Xóa người dùng thất bại",
@@ -1240,11 +1268,11 @@ export default function AdminDashboard() {
       await fetchCategories();
       await fetchBrands();
 
-      alert("Đã làm mới form sản phẩm");
+      toast.success("Đã làm mới form sản phẩm");
     } catch (error) {
       console.log(error);
 
-      alert("Không thể làm mới form sản phẩm");
+      toast.error("Không thể làm mới form sản phẩm");
     } finally {
       setProductFormRefreshing(false);
     }
@@ -1274,47 +1302,47 @@ export default function AdminDashboard() {
 
   const validateProductForm = () => {
     if (!product.name.trim()) {
-      alert("Vui lòng nhập tên sản phẩm");
+      toast.warning("Vui lòng nhập tên sản phẩm");
       return false;
     }
 
     if (!product.category) {
-      alert("Vui lòng chọn danh mục");
+      toast.warning("Vui lòng chọn danh mục");
       return false;
     }
 
     if (!product.brand.trim()) {
-      alert("Vui lòng nhập thương hiệu");
+      toast.warning("Vui lòng nhập thương hiệu");
       return false;
     }
 
     if (!product.stock) {
-      alert("Vui lòng nhập số lượng");
+      toast.warning("Vui lòng nhập số lượng");
       return false;
     }
 
     if (Number(product.stock) < 0) {
-      alert("Số lượng không được nhỏ hơn 0");
+      toast.warning("Số lượng không được nhỏ hơn 0");
       return false;
     }
 
     if (!product.price) {
-      alert("Vui lòng nhập giá sản phẩm");
+      toast.warning("Vui lòng nhập giá sản phẩm");
       return false;
     }
 
     if (Number(product.price) <= 0) {
-      alert("Giá sản phẩm phải lớn hơn 0");
+      toast.warning("Giá sản phẩm phải lớn hơn 0");
       return false;
     }
 
     if (!editingId && !product.image) {
-      alert("Vui lòng chọn ảnh chính sản phẩm");
+      toast.warning("Vui lòng chọn ảnh chính sản phẩm");
       return false;
     }
 
     if (!product.description.trim()) {
-      alert("Vui lòng nhập mô tả sản phẩm");
+      toast.warning("Vui lòng nhập mô tả sản phẩm");
       return false;
     }
 
@@ -1323,7 +1351,7 @@ export default function AdminDashboard() {
     );
 
     if (!hasValidSpec) {
-      alert("Vui lòng nhập ít nhất 1 thông số kỹ thuật");
+      toast.warning("Vui lòng nhập ít nhất 1 thông số kỹ thuật");
       return false;
     }
 
@@ -1332,7 +1360,7 @@ export default function AdminDashboard() {
     );
 
     if (!hasValidHighlight) {
-      alert("Vui lòng nhập ít nhất 1 điểm nổi bật");
+      toast.warning("Vui lòng nhập ít nhất 1 điểm nổi bật");
       return false;
     }
 
@@ -1341,7 +1369,7 @@ export default function AdminDashboard() {
     );
 
     if (!hasValidPromotion) {
-      alert("Vui lòng nhập ít nhất 1 ưu đãi mua hàng");
+      toast.warning("Vui lòng nhập ít nhất 1 ưu đãi mua hàng");
       return false;
     }
 
@@ -1434,7 +1462,7 @@ export default function AdminDashboard() {
           ],
         },
       ]);
-      alert("Thêm sản phẩm thành công");
+      toast.success("Thêm sản phẩm thành công");
     } catch (error) {
       console.log(error);
     }
@@ -1608,7 +1636,7 @@ export default function AdminDashboard() {
           ],
         },
       ]);
-      alert("Cập nhật sản phẩm thành công");
+      toast.success("Cập nhật sản phẩm thành công");
     } catch (error) {
       console.log(error);
     }
@@ -1629,17 +1657,17 @@ export default function AdminDashboard() {
     const discountPercent = Number(promotionForm.discountPercent);
 
     if (!title) {
-      alert("Vui lòng nhập tên khuyến mãi");
+      toast.warning("Vui lòng nhập tên khuyến mãi");
       return false;
     }
 
     if (selectedPromotionProductIds.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sản phẩm áp dụng khuyến mãi");
+      toast.warning("Vui lòng chọn ít nhất 1 sản phẩm áp dụng khuyến mãi");
       return false;
     }
 
     if (editingPromotionId && selectedPromotionProductIds.length !== 1) {
-      alert("Khi sửa khuyến mãi, vui lòng chỉ chọn 1 sản phẩm");
+      toast.warning("Khi sửa khuyến mãi, vui lòng chỉ chọn 1 sản phẩm");
       return false;
     }
 
@@ -1649,17 +1677,17 @@ export default function AdminDashboard() {
     );
 
     if (invalidProduct) {
-      alert("Có sản phẩm không tồn tại trong danh sách");
+      toast.warning("Có sản phẩm không tồn tại trong danh sách");
       return false;
     }
 
     if (!discountPercent) {
-      alert("Vui lòng nhập phần trăm giảm");
+      toast.warning("Vui lòng nhập phần trăm giảm");
       return false;
     }
 
     if (discountPercent <= 0 || discountPercent > 100) {
-      alert("Phần trăm giảm giá phải từ 1 đến 100");
+      toast.warning("Phần trăm giảm giá phải từ 1 đến 100");
       return false;
     }
 
@@ -1668,7 +1696,7 @@ export default function AdminDashboard() {
       promotionForm.endDate &&
       promotionForm.startDate > promotionForm.endDate
     ) {
-      alert("Ngày bắt đầu không được sau ngày kết thúc");
+      toast.warning("Ngày bắt đầu không được sau ngày kết thúc");
       return false;
     }
 
@@ -1723,7 +1751,7 @@ export default function AdminDashboard() {
           productId: Number(selectedPromotionProductIds[0]),
         });
 
-        alert("Cập nhật khuyến mãi thành công");
+        toast.success("Cập nhật khuyến mãi thành công");
       } else {
         await Promise.all(
           selectedPromotionProductIds.map((productId) =>
@@ -1734,7 +1762,7 @@ export default function AdminDashboard() {
           ),
         );
 
-        alert(
+        toast.success(
           `Thêm khuyến mãi cho ${selectedPromotionProductIds.length} sản phẩm thành công`,
         );
       }
@@ -1744,7 +1772,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert(
+      toast.error(
         getApiErrorMessage(
           error,
           editingPromotionId
@@ -1801,11 +1829,11 @@ export default function AdminDashboard() {
       await deletePromotion(id);
       await fetchPromotions();
 
-      alert("Xóa khuyến mãi thành công");
+      toast.success("Xóa khuyến mãi thành công");
     } catch (error) {
       console.log(error);
 
-      alert(getApiErrorMessage(error, "Xóa khuyến mãi thất bại"));
+      toast.error(getApiErrorMessage(error, "Xóa khuyến mãi thất bại"));
     }
   };
 
@@ -1818,52 +1846,54 @@ export default function AdminDashboard() {
     const usageLimit = Number(couponForm.usageLimit || 0);
 
     if (!code) {
-      alert("Vui lòng nhập mã giảm giá");
+      toast.warning("Vui lòng nhập mã giảm giá");
       return false;
     }
 
     if (code.length < 3 || code.length > 30) {
-      alert("Mã giảm giá phải từ 3 đến 30 ký tự");
+      toast.warning("Mã giảm giá phải từ 3 đến 30 ký tự");
       return false;
     }
 
     if (!/^[A-Za-z0-9_-]+$/.test(code)) {
-      alert("Mã giảm giá chỉ được gồm chữ, số, dấu gạch ngang hoặc gạch dưới");
+      toast.warning(
+        "Mã giảm giá chỉ được gồm chữ, số, dấu gạch ngang hoặc gạch dưới",
+      );
       return false;
     }
 
     if (!name) {
-      alert("Vui lòng nhập tên mã giảm giá");
+      toast.warning("Vui lòng nhập tên mã giảm giá");
       return false;
     }
 
     if (!couponForm.discountType) {
-      alert("Vui lòng chọn loại giảm giá");
+      toast.warning("Vui lòng chọn loại giảm giá");
       return false;
     }
 
     if (!discountValue || discountValue <= 0) {
-      alert("Giá trị giảm phải lớn hơn 0");
+      toast.warning("Giá trị giảm phải lớn hơn 0");
       return false;
     }
 
     if (couponForm.discountType === "PERCENT" && discountValue > 100) {
-      alert("Giá trị giảm theo phần trăm không được vượt quá 100");
+      toast.warning("Giá trị giảm theo phần trăm không được vượt quá 100");
       return false;
     }
 
     if (minOrderValue < 0) {
-      alert("Giá trị đơn hàng tối thiểu không được nhỏ hơn 0");
+      toast.warning("Giá trị đơn hàng tối thiểu không được nhỏ hơn 0");
       return false;
     }
 
     if (maxDiscount < 0) {
-      alert("Mức giảm tối đa không được nhỏ hơn 0");
+      toast.warning("Mức giảm tối đa không được nhỏ hơn 0");
       return false;
     }
 
     if (usageLimit < 0) {
-      alert("Giới hạn lượt dùng không được nhỏ hơn 0");
+      toast.warning("Giới hạn lượt dùng không được nhỏ hơn 0");
       return false;
     }
 
@@ -1872,7 +1902,7 @@ export default function AdminDashboard() {
       couponForm.endDate &&
       couponForm.startDate > couponForm.endDate
     ) {
-      alert("Ngày bắt đầu không được sau ngày kết thúc");
+      toast.warning("Ngày bắt đầu không được sau ngày kết thúc");
       return false;
     }
 
@@ -1928,10 +1958,10 @@ export default function AdminDashboard() {
     try {
       if (editingCouponId) {
         await updateCoupon(editingCouponId, payload);
-        alert("Cập nhật mã giảm giá thành công");
+        toast.success("Cập nhật mã giảm giá thành công");
       } else {
         await createCoupon(payload);
-        alert("Thêm mã giảm giá thành công");
+        toast.success("Thêm mã giảm giá thành công");
       }
 
       await fetchCoupons();
@@ -1939,7 +1969,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error(error);
 
-      alert(
+      toast.error(
         getApiErrorMessage(
           error,
           editingCouponId
@@ -2001,11 +2031,11 @@ export default function AdminDashboard() {
       await deleteCoupon(id);
       await fetchCoupons();
 
-      alert("Xóa mã giảm giá thành công");
+      toast.success("Xóa mã giảm giá thành công");
     } catch (error) {
       console.error(error);
 
-      alert(getApiErrorMessage(error, "Xóa mã giảm giá thất bại"));
+      toast.error(getApiErrorMessage(error, "Xóa mã giảm giá thất bại"));
     }
   };
 
@@ -2024,7 +2054,7 @@ export default function AdminDashboard() {
     try {
       await deleteProduct(id);
       await fetchProducts();
-      alert("Xóa sản phẩm thành công");
+      toast.success("Xóa sản phẩm thành công");
     } catch (error) {
       console.error(error);
 
@@ -2034,7 +2064,7 @@ export default function AdminDashboard() {
         error?.response?.data ||
         "Xóa sản phẩm thất bại";
 
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -2053,7 +2083,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Lỗi tải chi tiết đơn hàng:", error);
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
           error.response?.data ||
           "Không thể tải chi tiết đơn hàng",
@@ -2092,7 +2122,7 @@ export default function AdminDashboard() {
 
       await fetchOrders();
 
-      alert("Cập nhật trạng thái đơn hàng thành công");
+      toast.success("Cập nhật trạng thái đơn hàng thành công");
     } catch (error) {
       console.error("Lỗi cập nhật trạng thái:", error);
 
@@ -2102,7 +2132,7 @@ export default function AdminDashboard() {
         (typeof error.response?.data === "string" ? error.response.data : "") ||
         "Không thể cập nhật trạng thái đơn";
 
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -2188,22 +2218,22 @@ export default function AdminDashboard() {
     e.preventDefault();
 
     if (!bannerForm.imageUrl) {
-      alert("Vui lòng upload ảnh banner");
+      toast.warning("Vui lòng upload ảnh banner");
       return;
     }
 
     if (bannerForm.showTitle && !bannerForm.title.trim()) {
-      alert("Vui lòng nhập tiêu đề banner hoặc tắt hiển thị tiêu đề");
+      toast.warning("Vui lòng nhập tiêu đề banner hoặc tắt hiển thị tiêu đề");
       return;
     }
 
     if (bannerForm.showSubtitle && !bannerForm.subtitle.trim()) {
-      alert("Vui lòng nhập mô tả ngắn hoặc tắt hiển thị mô tả");
+      toast.warning("Vui lòng nhập mô tả ngắn hoặc tắt hiển thị mô tả");
       return;
     }
 
     if (bannerForm.targetType === "PRODUCT" && !bannerForm.targetProductId) {
-      alert("Vui lòng chọn sản phẩm đích");
+      toast.warning("Vui lòng chọn sản phẩm đích");
       return;
     }
 
@@ -2211,7 +2241,7 @@ export default function AdminDashboard() {
       bannerForm.targetType === "CUSTOM_LINK" &&
       !bannerForm.targetUrl.trim()
     ) {
-      alert("Vui lòng nhập link tùy chỉnh");
+      toast.warning("Vui lòng nhập link tùy chỉnh");
       return;
     }
 
@@ -2220,7 +2250,9 @@ export default function AdminDashboard() {
 
     if (bannerForm.targetType === "COLLECTION") {
       if (selectedBannerProductIds.length === 0) {
-        alert("Vui lòng chọn ít nhất 1 sản phẩm cho danh sách sản phẩm");
+        toast.warning(
+          "Vui lòng chọn ít nhất 1 sản phẩm cho danh sách sản phẩm",
+        );
         return;
       }
 
@@ -2254,17 +2286,17 @@ export default function AdminDashboard() {
     try {
       if (editingBannerId) {
         await updateBanner(editingBannerId, payload);
-        alert("Cập nhật banner thành công");
+        toast.success("Cập nhật banner thành công");
       } else {
         await createBanner(payload);
-        alert("Thêm banner thành công");
+        toast.success("Thêm banner thành công");
       }
 
       resetBannerForm();
       fetchBanners();
     } catch (error) {
       console.log(error);
-      alert("Lỗi khi lưu banner");
+      toast.error("Lỗi khi lưu banner");
     }
   };
 
@@ -2308,7 +2340,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert("Lỗi khi xóa banner");
+      toast.error("Lỗi khi xóa banner");
     }
   };
 
@@ -2389,7 +2421,7 @@ export default function AdminDashboard() {
     e.preventDefault();
 
     if (!sectionForm.title.trim()) {
-      alert("Vui lòng nhập tên khối");
+      toast.warning("Vui lòng nhập tên khối");
       return;
     }
 
@@ -2476,11 +2508,11 @@ export default function AdminDashboard() {
       if (editingSectionId) {
         await updateHomeSection(editingSectionId, payload);
 
-        alert("Cập nhật khối trang chủ thành công");
+        toast.success("Cập nhật khối trang chủ thành công");
       } else {
         await createHomeSection(payload);
 
-        alert("Thêm khối trang chủ thành công");
+        toast.success("Thêm khối trang chủ thành công");
       }
 
       resetSectionForm();
@@ -2489,7 +2521,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert("Lỗi khi lưu khối trang chủ");
+      toast.error("Lỗi khi lưu khối trang chủ");
     }
   };
 
@@ -2542,7 +2574,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert("Lỗi khi xóa khối trang chủ");
+      toast.error("Lỗi khi xóa khối trang chủ");
     }
   };
 
@@ -2558,7 +2590,7 @@ export default function AdminDashboard() {
       setSectionBanners(Array.isArray(data) ? data : []);
     } catch (error) {
       console.log(error);
-      alert("Không thể tải danh sách banner của khối");
+      toast.error("Không thể tải danh sách banner của khối");
     }
   };
 
@@ -2634,17 +2666,17 @@ export default function AdminDashboard() {
     e.preventDefault();
 
     if (!selectedBannerSectionId) {
-      alert("Vui lòng chọn khối cần quản lý banner");
+      toast.warning("Vui lòng chọn khối cần quản lý banner");
       return;
     }
 
     if (!sectionBannerForm.imageUrl) {
-      alert("Vui lòng chọn ảnh banner");
+      toast.warning("Vui lòng chọn ảnh banner");
       return;
     }
 
     if (!sectionBannerForm.title.trim()) {
-      alert("Vui lòng nhập tiêu đề banner");
+      toast.warning("Vui lòng nhập tiêu đề banner");
       return;
     }
 
@@ -2652,7 +2684,7 @@ export default function AdminDashboard() {
       sectionBannerForm.targetType === "PRODUCT" &&
       !sectionBannerForm.targetProductId
     ) {
-      alert("Vui lòng chọn sản phẩm đích");
+      toast.warning("Vui lòng chọn sản phẩm đích");
       return;
     }
 
@@ -2687,7 +2719,7 @@ export default function AdminDashboard() {
         await setSectionBannerProducts(savedBanner.id, sectionBannerProductIds);
       }
 
-      alert(
+      toast.success(
         editingSectionBannerId
           ? "Cập nhật banner thành công"
           : "Thêm banner thành công",
@@ -2698,7 +2730,7 @@ export default function AdminDashboard() {
       await fetchSectionBanners(selectedBannerSectionId);
     } catch (error) {
       console.log(error);
-      alert("Lỗi khi lưu banner của khối");
+      toast.error("Lỗi khi lưu banner của khối");
     }
   };
 
@@ -2749,10 +2781,10 @@ export default function AdminDashboard() {
 
       await fetchSectionBanners(selectedBannerSectionId);
 
-      alert("Xóa banner thành công");
+      toast.success("Xóa banner thành công");
     } catch (error) {
       console.log(error);
-      alert("Lỗi khi xóa banner");
+      toast.error("Lỗi khi xóa banner");
     }
   };
 
@@ -2774,32 +2806,32 @@ export default function AdminDashboard() {
     const sortOrder = Number(flashSaleForm.sortOrder);
 
     if (!title) {
-      alert("Vui lòng nhập tên chiến dịch Flash Sale");
+      toast.warning("Vui lòng nhập tên chiến dịch Flash Sale");
       return false;
     }
 
     if (!bannerImage) {
-      alert("Vui lòng chọn ảnh banner Flash Sale");
+      toast.warning("Vui lòng chọn ảnh banner Flash Sale");
       return false;
     }
 
     if (!flashSaleForm.startTime) {
-      alert("Vui lòng chọn thời gian bắt đầu");
+      toast.warning("Vui lòng chọn thời gian bắt đầu");
       return false;
     }
 
     if (!flashSaleForm.endTime) {
-      alert("Vui lòng chọn thời gian kết thúc");
+      toast.warning("Vui lòng chọn thời gian kết thúc");
       return false;
     }
 
     if (flashSaleForm.startTime >= flashSaleForm.endTime) {
-      alert("Thời gian bắt đầu phải trước thời gian kết thúc");
+      toast.warning("Thời gian bắt đầu phải trước thời gian kết thúc");
       return false;
     }
 
     if (!sortOrder || sortOrder <= 0) {
-      alert("Thứ tự hiển thị phải lớn hơn 0");
+      toast.warning("Thứ tự hiển thị phải lớn hơn 0");
       return false;
     }
 
@@ -2808,7 +2840,7 @@ export default function AdminDashboard() {
 
   const validateFlashSaleItemForm = () => {
     if (!selectedFlashSaleId) {
-      alert("Vui lòng chọn chiến dịch Flash Sale trước");
+      toast.warning("Vui lòng chọn chiến dịch Flash Sale trước");
       return false;
     }
 
@@ -2817,7 +2849,7 @@ export default function AdminDashboard() {
       : selectedFlashSaleProductIds;
 
     if (selectedIds.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sản phẩm Flash Sale");
+      toast.warning("Vui lòng chọn ít nhất 1 sản phẩm Flash Sale");
       return false;
     }
 
@@ -2827,37 +2859,39 @@ export default function AdminDashboard() {
     const limitPerUser = Number(flashSaleItemForm.limitPerUser || 1);
 
     if (!discountPercent || discountPercent <= 0) {
-      alert("Phần trăm giảm giá phải lớn hơn 0");
+      toast.warning("Phần trăm giảm giá phải lớn hơn 0");
       return false;
     }
 
     if (discountPercent > 100) {
-      alert("Phần trăm giảm giá không được vượt quá 100");
+      toast.warning("Phần trăm giảm giá không được vượt quá 100");
       return false;
     }
 
     if (!saleQuantity || saleQuantity <= 0) {
-      alert("Số lượng Flash Sale phải lớn hơn 0");
+      toast.warning("Số lượng Flash Sale phải lớn hơn 0");
       return false;
     }
 
     if (soldQuantity < 0) {
-      alert("Số lượng đã bán không được nhỏ hơn 0");
+      toast.warning("Số lượng đã bán không được nhỏ hơn 0");
       return false;
     }
 
     if (soldQuantity > saleQuantity) {
-      alert("Số lượng đã bán không được lớn hơn số lượng Flash Sale");
+      toast.warning("Số lượng đã bán không được lớn hơn số lượng Flash Sale");
       return false;
     }
 
     if (!limitPerUser || limitPerUser <= 0) {
-      alert("Giới hạn mua mỗi khách phải lớn hơn 0");
+      toast.warning("Giới hạn mua mỗi khách phải lớn hơn 0");
       return false;
     }
 
     if (limitPerUser > saleQuantity) {
-      alert("Giới hạn mua mỗi khách không được lớn hơn số lượng Flash Sale");
+      toast.warning(
+        "Giới hạn mua mỗi khách không được lớn hơn số lượng Flash Sale",
+      );
       return false;
     }
 
@@ -2867,14 +2901,16 @@ export default function AdminDashboard() {
       );
 
       if (!selectedProduct) {
-        alert("Có sản phẩm Flash Sale không tồn tại trong danh sách");
+        toast.warning("Có sản phẩm Flash Sale không tồn tại trong danh sách");
         return false;
       }
 
       const originalPrice = Number(selectedProduct.price || 0);
 
       if (!originalPrice || originalPrice <= 0) {
-        alert(`Giá gốc của sản phẩm "${selectedProduct.name}" không hợp lệ`);
+        toast.warning(
+          `Giá gốc của sản phẩm "${selectedProduct.name}" không hợp lệ`,
+        );
         return false;
       }
     }
@@ -2885,7 +2921,7 @@ export default function AdminDashboard() {
       );
 
       if (duplicatedItem) {
-        alert("Một số sản phẩm đã có trong chiến dịch Flash Sale");
+        toast.warning("Một số sản phẩm đã có trong chiến dịch Flash Sale");
         return false;
       }
     }
@@ -2936,10 +2972,10 @@ export default function AdminDashboard() {
     try {
       if (editingFlashSaleId) {
         await updateFlashSale(editingFlashSaleId, payload);
-        alert("Cập nhật chiến dịch Flash Sale thành công");
+        toast.success("Cập nhật chiến dịch Flash Sale thành công");
       } else {
         await createFlashSale(payload);
-        alert("Tạo chiến dịch Flash Sale thành công");
+        toast.success("Tạo chiến dịch Flash Sale thành công");
       }
 
       await fetchFlashSales();
@@ -2947,7 +2983,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert(
+      toast.error(
         getApiErrorMessage(
           error,
           editingFlashSaleId
@@ -3000,11 +3036,13 @@ export default function AdminDashboard() {
 
       await fetchFlashSales();
 
-      alert("Xóa chiến dịch Flash Sale thành công");
+      toast.success("Xóa chiến dịch Flash Sale thành công");
     } catch (error) {
       console.log(error);
 
-      alert(getApiErrorMessage(error, "Xóa chiến dịch Flash Sale thất bại"));
+      toast.error(
+        getApiErrorMessage(error, "Xóa chiến dịch Flash Sale thất bại"),
+      );
     }
   };
 
@@ -3122,7 +3160,7 @@ export default function AdminDashboard() {
           salePrice,
         });
 
-        alert("Cập nhật sản phẩm Flash Sale thành công");
+        toast.success("Cập nhật sản phẩm Flash Sale thành công");
       } else {
         await Promise.all(
           selectedFlashSaleProductIds.map((productId) => {
@@ -3144,7 +3182,7 @@ export default function AdminDashboard() {
           }),
         );
 
-        alert(
+        toast.success(
           `Đã thêm ${selectedFlashSaleProductIds.length} sản phẩm vào Flash Sale`,
         );
       }
@@ -3154,7 +3192,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert(
+      toast.error(
         getApiErrorMessage(
           error,
           editingFlashSaleItemId
@@ -3223,11 +3261,13 @@ export default function AdminDashboard() {
       await deleteFlashSaleItem(itemId);
       await fetchFlashSaleItems(selectedFlashSaleId);
 
-      alert("Xóa sản phẩm Flash Sale thành công");
+      toast.success("Xóa sản phẩm Flash Sale thành công");
     } catch (error) {
       console.log(error);
 
-      alert(getApiErrorMessage(error, "Xóa sản phẩm Flash Sale thất bại"));
+      toast.error(
+        getApiErrorMessage(error, "Xóa sản phẩm Flash Sale thất bại"),
+      );
     }
   };
 
@@ -4118,10 +4158,13 @@ export default function AdminDashboard() {
           className="sidebar-logo sidebar-logo-button"
           onClick={() => navigate("/")}
         >
-          <span className="logo-icon">⚡</span>
-
           <span className="sidebar-logo-text">
-            <strong>ElectroShop</strong>
+            <strong className="sidebar-brand-logo">
+              <span className="sidebar-brand-electro">Electro</span>
+              <span className="sidebar-brand-shop">Shop</span>
+              <span className="sidebar-brand-bolt">⚡</span>
+            </strong>
+
             <small>Admin Center</small>
           </span>
         </button>
@@ -4133,7 +4176,7 @@ export default function AdminDashboard() {
             className={
               activeMenu === "overview" ? "sidebar-item active" : "sidebar-item"
             }
-            onClick={() => setActiveMenu("overview")}
+            onClick={() => handleOpenAdminMenu("overview")}
           >
             <span>📊</span>
 
@@ -4144,7 +4187,7 @@ export default function AdminDashboard() {
             className={
               activeMenu === "products" ? "sidebar-item active" : "sidebar-item"
             }
-            onClick={() => setActiveMenu("products")}
+            onClick={() => handleOpenAdminMenu("products")}
           >
             <span>📦</span>
 
@@ -4157,7 +4200,7 @@ export default function AdminDashboard() {
                 ? "sidebar-item active"
                 : "sidebar-item"
             }
-            onClick={() => setActiveMenu("promotions")}
+            onClick={() => handleOpenAdminMenu("promotions")}
           >
             <span>🔥</span>
 
@@ -4168,7 +4211,7 @@ export default function AdminDashboard() {
             className={
               activeMenu === "homepage" ? "sidebar-item active" : "sidebar-item"
             }
-            onClick={() => setActiveMenu("homepage")}
+            onClick={() => handleOpenAdminMenu("homepage")}
           >
             <span>🖼</span>
 
@@ -4181,7 +4224,7 @@ export default function AdminDashboard() {
                 ? "sidebar-item active"
                 : "sidebar-item"
             }
-            onClick={() => setActiveMenu("categories")}
+            onClick={() => handleOpenAdminMenu("categories")}
           >
             <span>🗂</span>
 
@@ -4193,7 +4236,7 @@ export default function AdminDashboard() {
               activeMenu === "orders" ? "sidebar-item active" : "sidebar-item"
             }
             onClick={() => {
-              setActiveMenu("orders");
+              handleOpenAdminMenu("orders");
               fetchOrders();
             }}
           >
@@ -4208,7 +4251,7 @@ export default function AdminDashboard() {
               activeMenu === "users" ? "sidebar-item active" : "sidebar-item"
             }
             onClick={() => {
-              setActiveMenu("users");
+              handleOpenAdminMenu("users");
               fetchUsers();
             }}
           >
@@ -4280,7 +4323,12 @@ export default function AdminDashboard() {
             promotions={discountPromotions}
             coupons={coupons}
             flashSales={flashSales}
-            onOpenMenu={setActiveMenu}
+            flashSaleItems={flashSaleItems}
+            onOpenMenu={handleOpenAdminMenu}
+            onOpenOrder={(order) => {
+              handleOpenAdminMenu("orders");
+              handleOpenOrderDetail(order);
+            }}
             onRefresh={() => {
               fetchProducts();
               fetchOrders();

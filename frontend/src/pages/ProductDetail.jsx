@@ -2,13 +2,15 @@ import "./ProductDetail.css";
 
 import { getImageUrl } from "../utils/imageUtils";
 
-import ProductCard from "../components/ProductCard";
+import HomeProductCard from "../components/home/HomeProductCard";
 
 import ProductReviews from "../components/ProductReviews";
 
+import { useToast } from "../components/common/ToastProvider";
+
 import Header from "../components/Header";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Link,
@@ -21,10 +23,15 @@ import { addToCart, saveBuyNowItem } from "../utils/cartUtils";
 
 import { getProductById, getProducts } from "../services/productApi";
 
-import { getActiveFlashSaleProduct } from "../services/flashSaleApi";
+import {
+  getActiveFlashSaleProduct,
+  getActiveFlashSales,
+} from "../services/flashSaleApi";
 
 import { getActivePromotions } from "../services/promotionApi";
 export default function ProductDetail() {
+  const toast = useToast();
+
   const { id } = useParams();
 
   const navigate = useNavigate();
@@ -36,6 +43,10 @@ export default function ProductDetail() {
 
   const [activePromotion, setActivePromotion] = useState(null);
 
+  const [activePromotions, setActivePromotions] = useState([]);
+
+  const [activeFlashSales, setActiveFlashSales] = useState([]);
+
   const [selectedImage, setSelectedImage] = useState("");
 
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -44,10 +55,6 @@ export default function ProductDetail() {
 
   const [quantity, setQuantity] = useState(1);
 
-  const detailInfoRef = useRef(null);
-
-  const detailContainerRef = useRef(null);
-
   const [selectedOptions, setSelectedOptions] = useState({});
 
   const [showAllOptions, setShowAllOptions] = useState(false);
@@ -55,6 +62,14 @@ export default function ProductDetail() {
   const [activeTab, setActiveTab] = useState("description");
 
   const [thumbStart, setThumbStart] = useState(0);
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, [id]);
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
@@ -94,6 +109,78 @@ export default function ProductDetail() {
     return convertPriceToNumber(price).toLocaleString("vi-VN") + "đ";
   };
 
+  const normalizeComparableText = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase();
+
+  const buildRelatedProducts = (currentProduct, products) => {
+    if (!currentProduct || !Array.isArray(products)) {
+      return [];
+    }
+
+    const currentId = Number(currentProduct.id);
+    const currentCategory = normalizeComparableText(currentProduct.category);
+    const currentBrand = normalizeComparableText(currentProduct.brand);
+    const currentPrice = convertPriceToNumber(currentProduct.price);
+
+    const candidates = products
+      .filter((item) => item && Number(item.id) !== currentId)
+      .map((item) => {
+        const sameCategory =
+          currentCategory &&
+          normalizeComparableText(item.category) === currentCategory;
+        const sameBrand =
+          currentBrand && normalizeComparableText(item.brand) === currentBrand;
+        const itemPrice = convertPriceToNumber(item.price);
+        const priceDistance =
+          currentPrice > 0 && itemPrice > 0
+            ? Math.abs(itemPrice - currentPrice) / currentPrice
+            : 1;
+
+        return {
+          product: item,
+          sameCategory,
+          sameBrand,
+          priceDistance,
+          soldQuantity: Number(item.soldQuantity || 0),
+          inStock: Number(item.stock || 0) > 0,
+        };
+      });
+
+    const similarCandidates = candidates.filter(
+      (item) => item.sameCategory || item.sameBrand,
+    );
+
+    return (similarCandidates.length > 0 ? similarCandidates : candidates)
+      .sort((a, b) => {
+        const scoreA =
+          (a.sameCategory ? 100 : 0) +
+          (a.sameBrand ? 45 : 0) +
+          (a.inStock ? 8 : 0);
+        const scoreB =
+          (b.sameCategory ? 100 : 0) +
+          (b.sameBrand ? 45 : 0) +
+          (b.inStock ? 8 : 0);
+
+        if (scoreA !== scoreB) {
+          return scoreB - scoreA;
+        }
+
+        if (a.priceDistance !== b.priceDistance) {
+          return a.priceDistance - b.priceDistance;
+        }
+
+        if (a.soldQuantity !== b.soldQuantity) {
+          return b.soldQuantity - a.soldQuantity;
+        }
+
+        return Number(b.product.id || 0) - Number(a.product.id || 0);
+      })
+      .slice(0, 12)
+      .map((item) => item.product);
+  };
+
   const specifications = parseJsonArray(product.specifications);
 
   const highlights = parseJsonArray(product.highlights);
@@ -131,6 +218,89 @@ export default function ProductDetail() {
         return true;
       }) || null
     );
+  };
+
+  const getDiscountPrice = (price, discountPercent) => {
+    return Math.round(
+      (Number(price || 0) * (100 - Number(discountPercent || 0))) / 100,
+    );
+  };
+
+  const getFlashSaleItemForProduct = (productId) => {
+    for (const flashSale of activeFlashSales) {
+      const item = flashSale?.items?.find(
+        (flashItem) => Number(flashItem.productId) === Number(productId),
+      );
+
+      if (!item) {
+        continue;
+      }
+
+      const salePrice = Number(item.salePrice || 0);
+      const originalPrice = Number(item.originalPrice || 0);
+      const saleQuantity = Number(item.saleQuantity || 0);
+      const soldQuantity = Number(item.soldQuantity || 0);
+      const remainingQuantity = Math.max(0, saleQuantity - soldQuantity);
+
+      if (
+        salePrice <= 0 ||
+        originalPrice <= 0 ||
+        salePrice >= originalPrice ||
+        remainingQuantity <= 0
+      ) {
+        continue;
+      }
+
+      return item;
+    }
+
+    return null;
+  };
+
+  const getRelatedPriceInfo = (item) => {
+    const productOriginalPrice = convertPriceToNumber(item?.price);
+    const flashSaleItem = getFlashSaleItemForProduct(item?.id);
+
+    if (flashSaleItem) {
+      const originalPrice = Number(
+        flashSaleItem.originalPrice || productOriginalPrice,
+      );
+      const finalPrice = Number(flashSaleItem.salePrice);
+      const calculatedPercent =
+        originalPrice > 0
+          ? Math.round(((originalPrice - finalPrice) * 100) / originalPrice)
+          : 0;
+
+      return {
+        originalPrice,
+        finalPrice,
+        priceSource: "FLASH_SALE",
+        discountPercent:
+          Number(flashSaleItem.discountPercent || 0) || calculatedPercent,
+        flashSaleItemId: flashSaleItem.itemId,
+      };
+    }
+
+    const promotion = findActivePromotion(activePromotions, item?.id);
+
+    if (promotion) {
+      const discountPercent = Number(promotion.discountPercent || 0);
+
+      return {
+        originalPrice: productOriginalPrice,
+        finalPrice: getDiscountPrice(productOriginalPrice, discountPercent),
+        priceSource: "PROMOTION",
+        discountPercent,
+        promotionId: promotion.id,
+      };
+    }
+
+    return {
+      originalPrice: productOriginalPrice,
+      finalPrice: productOriginalPrice,
+      priceSource: "REGULAR",
+      discountPercent: 0,
+    };
   };
 
   const calculateRegularPrice = () => {
@@ -259,108 +429,23 @@ export default function ProductDetail() {
     setSelectedOptions(defaultSelectedOptions);
   }, [product.options]);
 
-  useEffect(() => {
-    const container = detailContainerRef.current;
-
-    const detailInfo = detailInfoRef.current;
-
-    if (!container || !detailInfo) {
-      return;
-    }
-
-    let targetScroll = detailInfo.scrollTop;
-
-    let animationFrameId = null;
-
-    const smoothScrollTo = (target) => {
-      const start = detailInfo.scrollTop;
-
-      const distance = target - start;
-
-      const duration = 180;
-
-      const startTime = performance.now();
-
-      const animate = (currentTime) => {
-        const elapsed = currentTime - startTime;
-
-        const progress = Math.min(elapsed / duration, 1);
-
-        const ease = 1 - Math.pow(1 - progress, 3);
-
-        detailInfo.scrollTop = start + distance * ease;
-
-        if (progress < 1) {
-          animationFrameId = requestAnimationFrame(animate);
-        }
-      };
-
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    const handleWheel = (e) => {
-      const scrollingDown = e.deltaY > 0;
-
-      const scrollingUp = e.deltaY < 0;
-
-      const maxScroll = detailInfo.scrollHeight - detailInfo.clientHeight;
-
-      const canScrollDown = detailInfo.scrollTop < maxScroll - 2;
-
-      const canScrollUp = detailInfo.scrollTop > 2;
-
-      if (scrollingDown && canScrollDown) {
-        e.preventDefault();
-
-        e.stopPropagation();
-
-        targetScroll = Math.min(maxScroll, targetScroll + e.deltaY * 0.9);
-
-        smoothScrollTo(targetScroll);
-
-        return;
-      }
-
-      if (scrollingUp && canScrollUp) {
-        e.preventDefault();
-
-        e.stopPropagation();
-
-        targetScroll = Math.max(0, targetScroll + e.deltaY * 1.05);
-
-        smoothScrollTo(targetScroll);
-
-        return;
-      }
-
-      targetScroll = detailInfo.scrollTop;
-    };
-
-    container.addEventListener("wheel", handleWheel, {
-      passive: false,
-    });
-
-    return () => {
-      container.removeEventListener("wheel", handleWheel);
-
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-    };
-  }, [product, showAllOptions]);
   const fetchProduct = async () => {
     try {
-      const [productData, flashSaleData, promotionData, allProducts] =
+      const [
+        productData,
+        flashSaleData,
+        promotionData,
+        activeFlashSaleList,
+        allProducts,
+      ] =
         await Promise.all([
           getProductById(id),
 
           getActiveFlashSaleProduct(id),
 
           getActivePromotions(),
+
+          getActiveFlashSales(),
 
           getProducts(),
         ]);
@@ -376,22 +461,24 @@ export default function ProductDetail() {
         ),
       );
 
+      setActivePromotions(Array.isArray(promotionData) ? promotionData : []);
+      setActiveFlashSales(
+        Array.isArray(activeFlashSaleList) ? activeFlashSaleList : [],
+      );
+
       setSelectedImage(getImageUrl(productData.image));
 
       setQuantity(1);
       setThumbStart(0);
 
-      const filteredProducts = allProducts.filter(
-        (item) =>
-          item.category === productData.category && item.id !== productData.id,
-      );
-
-      setRelatedProducts(filteredProducts.slice(0, 12));
+      setRelatedProducts(buildRelatedProducts(productData, allProducts));
     } catch (error) {
       console.error("Không thể tải sản phẩm:", error);
 
       setActiveFlashSaleProduct(null);
       setActivePromotion(null);
+      setActivePromotions([]);
+      setActiveFlashSales([]);
     }
   };
 
@@ -436,7 +523,7 @@ export default function ProductDetail() {
 
   const validatePurchase = () => {
     if (!product?.id) {
-      alert("Không tìm thấy thông tin sản phẩm");
+      toast.error("Không tìm thấy thông tin sản phẩm");
 
       return false;
     }
@@ -444,19 +531,19 @@ export default function ProductDetail() {
     const stock = Number(product.stock || 0);
 
     if (stock <= 0) {
-      alert("Sản phẩm hiện đã hết hàng");
+      toast.warning("Sản phẩm hiện đã hết hàng");
 
       return false;
     }
 
     if (quantity < 1) {
-      alert("Số lượng mua không hợp lệ");
+      toast.warning("Số lượng mua không hợp lệ");
 
       return false;
     }
 
     if (quantity > stock) {
-      alert(`Sản phẩm chỉ còn ${stock} sản phẩm`);
+      toast.warning(`Sản phẩm chỉ còn ${stock} sản phẩm`);
 
       return false;
     }
@@ -472,7 +559,7 @@ export default function ProductDetail() {
     });
 
     if (missingOption) {
-      alert(`Vui lòng chọn ${missingOption.groupName}`);
+      toast.warning(`Vui lòng chọn ${missingOption.groupName}`);
 
       return false;
     }
@@ -513,7 +600,7 @@ export default function ProductDetail() {
 
     addToCart(cartProduct);
 
-    alert("Đã thêm vào giỏ hàng");
+    toast.success("Đã thêm sản phẩm vào giỏ hàng");
   };
 
   const getCategoryLink = () => {
@@ -580,7 +667,7 @@ export default function ProductDetail() {
       </div>
 
       <div className="product-detail-page">
-        <div className="product-detail-container" ref={detailContainerRef}>
+        <div className="product-detail-container">
           {/* LEFT */}
 
           <div className="product-gallery">
@@ -653,7 +740,7 @@ export default function ProductDetail() {
 
           {/* CENTER INFO */}
 
-          <div className="product-detail-info" ref={detailInfoRef}>
+          <div className="product-detail-info">
             <h1>{product.name}</h1>
 
             <div className="product-brand-row">
@@ -866,10 +953,7 @@ export default function ProductDetail() {
             <div className="side-suggest-box">
               <h3>CÓ THỂ BẠN THÍCH</h3>
 
-              {relatedProducts
-                .filter((item) => item.category === product.category)
-                .slice(0, 3)
-                .map((item) => (
+              {relatedProducts.slice(0, 3).map((item) => (
                   <Link
                     to={`/product/${item.id}`}
                     className="side-suggest-item"
@@ -924,7 +1008,7 @@ export default function ProductDetail() {
               <div className="detail-content-grid">
                 {/* MÔ TẢ */}
 
-                <div className="detail-content-card">
+                <div className="detail-content-card detail-description-card">
                   <h3>MÔ TẢ SẢN PHẨM</h3>
 
                   <p>{product.description}</p>
@@ -932,7 +1016,7 @@ export default function ProductDetail() {
 
                 {/* THÔNG SỐ */}
 
-                <div className="detail-content-card">
+                <div className="detail-content-card detail-spec-card">
                   <h3>THÔNG SỐ KỸ THUẬT</h3>
 
                   <div className="specification-table">
@@ -950,7 +1034,7 @@ export default function ProductDetail() {
 
                 {/* ĐIỂM NỔI BẬT */}
 
-                <div className="detail-content-card">
+                <div className="detail-content-card detail-highlight-card">
                   <h3>ĐIỂM NỔI BẬT</h3>
 
                   <div className="highlight-list">
@@ -1079,53 +1163,60 @@ export default function ProductDetail() {
 
         {/* RELATED PRODUCTS */}
 
-        <div className="related-section">
-          <div className="section-header">
-            <h2>Sản phẩm tương tự</h2>
+        {relatedProducts.length > 0 && (
+          <div className="related-section">
+            <div className="section-header">
+              <h2>Sản phẩm tương tự</h2>
 
-            <p>Có thể bạn sẽ thích</p>
-          </div>
-
-          <div className="slider-wrapper">
-            {/* LEFT BUTTON */}
-
-            <button
-              className="slider-btn left"
-              onClick={() => {
-                document.querySelector(".related-slider").scrollBy({
-                  left: -700,
-
-                  behavior: "smooth",
-                });
-              }}
-            >
-              ❮
-            </button>
-
-            {/* RELATED SLIDER */}
-
-            <div className="related-slider">
-              {relatedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+              <p>Cùng danh mục, thương hiệu hoặc mức giá gần sản phẩm này</p>
             </div>
 
-            {/* RIGHT BUTTON */}
+            <div className="slider-wrapper">
+              {/* LEFT BUTTON */}
 
-            <button
-              className="slider-btn right"
-              onClick={() => {
-                document.querySelector(".related-slider").scrollBy({
-                  left: 700,
+              <button
+                className="slider-btn left"
+                onClick={() => {
+                  document.querySelector(".related-slider").scrollBy({
+                    left: -700,
 
-                  behavior: "smooth",
-                });
-              }}
-            >
-              ❯
-            </button>
+                    behavior: "smooth",
+                  });
+                }}
+              >
+                ❮
+              </button>
+
+              {/* RELATED SLIDER */}
+
+              <div className="related-slider">
+                {relatedProducts.map((item) => (
+                  <HomeProductCard
+                    key={item.id}
+                    product={item}
+                    priceInfo={getRelatedPriceInfo(item)}
+                    onOpen={() => navigate(`/product/${item.id}`)}
+                  />
+                ))}
+              </div>
+
+              {/* RIGHT BUTTON */}
+
+              <button
+                className="slider-btn right"
+                onClick={() => {
+                  document.querySelector(".related-slider").scrollBy({
+                    left: 700,
+
+                    behavior: "smooth",
+                  });
+                }}
+              >
+                ❯
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* FULLSCREEN */}

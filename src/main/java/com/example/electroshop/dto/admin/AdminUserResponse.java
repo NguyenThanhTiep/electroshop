@@ -1,6 +1,7 @@
 package com.example.electroshop.dto.admin;
 
 import com.example.electroshop.entity.User;
+import java.time.LocalDateTime;
 
 public class AdminUserResponse {
 
@@ -16,6 +17,8 @@ public class AdminUserResponse {
 
     private Boolean locked;
 
+    private LocalDateTime createdAt;
+
     public AdminUserResponse() {
     }
 
@@ -25,7 +28,8 @@ public class AdminUserResponse {
             String email,
             String phone,
             String role,
-            Boolean locked
+            Boolean locked,
+            LocalDateTime createdAt
     ) {
         this.id = id;
         this.fullName = fullName;
@@ -33,6 +37,7 @@ public class AdminUserResponse {
         this.phone = phone;
         this.role = role;
         this.locked = locked;
+        this.createdAt = createdAt;
     }
 
     public static AdminUserResponse fromUser(User user) {
@@ -42,7 +47,8 @@ public class AdminUserResponse {
                 user.getEmail(),
                 user.getPhone(),
                 user.getRole(),
-                user.getLocked()
+                user.getLocked(),
+                user.getCreatedAt()
         );
     }
 
@@ -68,5 +74,9 @@ public class AdminUserResponse {
 
     public Boolean getLocked() {
         return locked;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 }

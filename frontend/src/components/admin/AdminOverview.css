@@ -66,6 +66,39 @@
   line-height: 1.7;
 }
 
+.overview-range-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+  padding: 7px;
+  border: 1px solid rgba(191, 219, 254, 0.22);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.overview-range-btn {
+  min-height: 38px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 13px;
+  background: transparent;
+  color: #dbeafe;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.overview-range-btn:hover,
+.overview-range-btn.active {
+  background: #ffffff;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
 .overview-hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -121,6 +154,49 @@
 .overview-hero-card strong {
   font-size: 34px;
   line-height: 1.1;
+}
+
+.overview-hero-card em,
+.overview-kpi-trend {
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.overview-hero-card em.positive,
+.overview-kpi-trend.positive {
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+}
+
+.overview-kpi-trend.positive {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.overview-hero-card em.negative,
+.overview-kpi-trend.negative {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+}
+
+.overview-kpi-trend.negative {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.overview-hero-card em.neutral,
+.overview-kpi-trend.neutral {
+  background: rgba(191, 219, 254, 0.18);
+  color: #dbeafe;
+}
+
+.overview-kpi-trend.neutral {
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .overview-kpi-grid {
@@ -214,6 +290,385 @@
 .overview-kpi-card small {
   color: #64748b;
   font-weight: 700;
+}
+
+.overview-kpi-trend {
+  display: inline-flex;
+  margin-top: 9px;
+}
+
+.overview-insight-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+  gap: 22px;
+}
+
+.overview-chart-panel {
+  overflow: hidden;
+}
+
+.overview-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.overview-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.overview-chart-legend span::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.overview-chart-legend .revenue-dot::before {
+  background: #2563eb;
+}
+
+.overview-chart-legend .orders-dot::before {
+  background: #f97316;
+}
+
+.overview-chart-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.overview-chart-summary div {
+  padding: 14px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #f8fbff, #eef4ff);
+  border: 1px solid #dbeafe;
+}
+
+.overview-chart-summary span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.overview-chart-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: #0f172a;
+  font-size: 17px;
+}
+
+.overview-chart {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(38px, 1fr);
+  align-items: end;
+  gap: 10px;
+  min-height: 240px;
+  overflow-x: auto;
+  padding: 16px 4px 4px;
+}
+
+.overview-chart-column {
+  display: grid;
+  align-items: end;
+  gap: 9px;
+  min-width: 38px;
+}
+
+.overview-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 180px;
+  padding: 0 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.overview-chart-bar {
+  width: 13px;
+  min-height: 7px;
+  border-radius: 999px 999px 4px 4px;
+  transition:
+    height 0.22s ease,
+    transform 0.18s ease;
+}
+
+.overview-chart-bar:hover {
+  transform: scaleY(1.04);
+}
+
+.overview-chart-bar.revenue {
+  background: linear-gradient(180deg, #60a5fa, #2563eb);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+}
+
+.overview-chart-bar.orders {
+  background: linear-gradient(180deg, #fbbf24, #f97316);
+  box-shadow: 0 8px 18px rgba(249, 115, 22, 0.2);
+}
+
+.overview-chart-column small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.overview-attention-panel {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(249, 115, 22, 0.13),
+      transparent 34%
+    ),
+    #ffffff;
+}
+
+.overview-attention-list {
+  display: grid;
+  gap: 12px;
+}
+
+.overview-attention-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.overview-attention-item:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.overview-attention-item > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  background: #ffffff;
+  font-size: 20px;
+}
+
+.overview-attention-item div {
+  display: grid;
+  gap: 4px;
+}
+
+.overview-attention-item strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.overview-attention-item small {
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.overview-attention-item b {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.overview-attention-item.warning b {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.overview-attention-item.danger b {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.overview-attention-item.info b {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.overview-ops-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.9fr);
+  gap: 22px;
+}
+
+.overview-top-product-list {
+  display: grid;
+  gap: 12px;
+}
+
+.overview-top-product {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #eef2f7;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.overview-rank {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+  color: #ffffff;
+  font-weight: 950;
+}
+
+.overview-top-product div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.overview-top-product strong {
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-top-product small {
+  color: #64748b;
+  font-weight: 750;
+}
+
+.overview-top-product b {
+  color: #dc2626;
+  white-space: nowrap;
+}
+
+.overview-smart-stock-panel {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(14, 165, 233, 0.12),
+      transparent 34%
+    ),
+    #ffffff;
+}
+
+.overview-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.overview-inventory-card {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.overview-inventory-card:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.overview-inventory-card strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.overview-inventory-card span {
+  color: #0f172a;
+  font-weight: 950;
+}
+
+.overview-inventory-card small {
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.overview-inventory-card.danger strong {
+  color: #dc2626;
+}
+
+.overview-inventory-card.warning strong {
+  color: #d97706;
+}
+
+.overview-inventory-card.hot strong {
+  color: #7c3aed;
+}
+
+.overview-inventory-card.info strong {
+  color: #0891b2;
+}
+
+.overview-inventory-detail,
+.overview-marketing-detail {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.overview-inventory-detail div,
+.overview-marketing-detail div {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border-radius: 17px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+}
+
+.overview-inventory-detail strong,
+.overview-marketing-detail strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.overview-inventory-detail small,
+.overview-marketing-detail small {
+  color: #64748b;
+  line-height: 1.45;
+  font-weight: 750;
 }
 
 .overview-content-grid {
@@ -404,6 +859,13 @@
   transition: 0.2s ease;
 }
 
+.overview-order-card {
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .overview-order-card:hover,
 .overview-stock-item:hover {
   transform: translateY(-2px);
@@ -432,6 +894,53 @@
 .overview-order-card b {
   color: #dc2626;
   white-space: nowrap;
+}
+
+.overview-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.overview-order-badge.WAITING_PAYMENT {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.overview-order-badge.PENDING_CONFIRMATION {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.overview-order-badge.CONFIRMED {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.overview-order-badge.PREPARING {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.overview-order-badge.SHIPPING {
+  background: #cffafe;
+  color: #0891b2;
+}
+
+.overview-order-badge.COMPLETED {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.overview-order-badge.CANCELLED {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .overview-stock-item b {
@@ -508,6 +1017,8 @@
   }
 
   .overview-hero,
+  .overview-insight-grid,
+  .overview-ops-grid,
   .overview-content-grid,
   .overview-bottom-grid {
     grid-template-columns: 1fr;
@@ -526,6 +1037,33 @@
   .overview-kpi-grid,
   .overview-quick-grid {
     grid-template-columns: 1fr;
+  }
+
+  .overview-range-switch,
+  .overview-chart-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-chart-summary {
+    display: grid;
+  }
+
+  .overview-attention-item {
+    grid-template-columns: 42px 1fr;
+  }
+
+  .overview-attention-item b {
+    grid-column: 2;
+    width: fit-content;
+  }
+
+  .overview-inventory-grid,
+  .overview-top-product {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-top-product b {
+    justify-self: start;
   }
 
   .overview-panel-header,

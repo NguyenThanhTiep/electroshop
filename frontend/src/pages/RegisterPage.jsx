@@ -10,7 +10,11 @@ import Header from "../components/Header";
 
 import Footer from "../components/Footer";
 
+import { useToast } from "../components/common/ToastProvider";
+
 export default function RegisterPage() {
+  const toast = useToast();
+
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -88,7 +92,7 @@ export default function RegisterPage() {
         password: form.password,
       });
 
-      alert("Đăng ký thành công");
+      toast.success("Đăng ký thành công");
 
       navigate("/login");
     } catch (error) {
