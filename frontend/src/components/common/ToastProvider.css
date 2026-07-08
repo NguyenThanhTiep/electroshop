@@ -1,0 +1,165 @@
+.app-toast-container {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 99999;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  width: min(420px, calc(100vw - 28px));
+
+  pointer-events: none;
+}
+
+.app-toast {
+  display: grid;
+  grid-template-columns: 44px 1fr 32px;
+  gap: 12px;
+  align-items: flex-start;
+
+  padding: 15px 14px;
+
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+
+  box-shadow:
+    0 20px 45px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.55) inset;
+
+  backdrop-filter: blur(14px);
+
+  pointer-events: auto;
+
+  animation: toastSlideIn 0.28s ease both;
+  overflow: hidden;
+}
+
+.app-toast::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+}
+
+.app-toast-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 14px;
+
+  font-size: 20px;
+}
+
+.app-toast-content strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #0f172a;
+
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.app-toast-content p {
+  margin: 0;
+
+  color: #475569;
+
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.app-toast-close {
+  width: 30px;
+  height: 30px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: transparent;
+  color: #64748b;
+
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.app-toast-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.app-toast-success::before {
+  background: #16a34a;
+}
+
+.app-toast-success .app-toast-icon {
+  background: #dcfce7;
+}
+
+.app-toast-error::before {
+  background: #ef4444;
+}
+
+.app-toast-error .app-toast-icon {
+  background: #fee2e2;
+}
+
+.app-toast-warning::before {
+  background: #f97316;
+}
+
+.app-toast-warning .app-toast-icon {
+  background: #ffedd5;
+}
+
+.app-toast-info::before {
+  background: #2563eb;
+}
+
+.app-toast-info .app-toast-icon {
+  background: #dbeafe;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (max-width: 700px) {
+  .app-toast-container {
+    top: 14px;
+    right: 14px;
+    left: 14px;
+
+    width: auto;
+  }
+
+  .app-toast {
+    grid-template-columns: 38px 1fr 28px;
+    border-radius: 16px;
+  }
+
+  .app-toast-icon {
+    width: 38px;
+    height: 38px;
+  }
+}

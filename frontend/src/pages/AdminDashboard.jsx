@@ -1,3 +1,4 @@
+import { useToast } from "../components/common/ToastProvider";
 import "./AdminDashboard.css";
 import AdminOverview from "../components/admin/AdminOverview";
 import {
@@ -233,6 +234,7 @@ const getOrderItemOptions = (selectedOptions) => {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const productImageUploadRef = useRef(null);
 
@@ -358,6 +360,19 @@ export default function AdminDashboard() {
   const [categoryIcon, setCategoryIcon] = useState("💻");
 
   const [editingCategoryId, setEditingCategoryId] = useState(null);
+
+  const [categoryManageTab, setCategoryManageTab] = useState("categories");
+
+  const [categorySearchKeyword, setCategorySearchKeyword] = useState("");
+  const [categoryStatusFilter, setCategoryStatusFilter] = useState("ALL");
+  const [categorySortMode, setCategorySortMode] = useState("ID_DESC");
+  const [categoryPage, setCategoryPage] = useState(1);
+
+  const [brandSearchKeyword, setBrandSearchKeyword] = useState("");
+  const [brandCategoryFilter, setBrandCategoryFilter] = useState("ALL");
+  const [brandStatusFilter, setBrandStatusFilter] = useState("ALL");
+  const [brandSortMode, setBrandSortMode] = useState("ID_DESC");
+  const [brandPage, setBrandPage] = useState(1);
 
   const [editingId, setEditingId] = useState(null);
 
@@ -644,6 +659,19 @@ export default function AdminDashboard() {
   ]);
 
   useEffect(() => {
+    setCategoryPage(1);
+  }, [categorySearchKeyword, categoryStatusFilter, categorySortMode]);
+
+  useEffect(() => {
+    setBrandPage(1);
+  }, [
+    brandSearchKeyword,
+    brandCategoryFilter,
+    brandStatusFilter,
+    brandSortMode,
+  ]);
+
+  useEffect(() => {
     setHomeBannerPage(1);
   }, [
     homeBannerSearchKeyword,
@@ -761,7 +789,19 @@ export default function AdminDashboard() {
     e.preventDefault();
 
     if (!categoryName.trim()) {
-      alert("Vui lòng nhập tên danh mục");
+      toast.warning("Vui lòng nhập tên danh mục");
+
+      return;
+    }
+
+    const isDuplicatedCategory = categories.some(
+      (category) =>
+        normalizeText(category.name) === normalizeText(categoryName.trim()) &&
+        Number(category.id) !== Number(editingCategoryId),
+    );
+
+    if (isDuplicatedCategory) {
+      alert("Tên danh mục đã tồn tại");
 
       return;
     }
@@ -773,14 +813,14 @@ export default function AdminDashboard() {
           icon: categoryIcon,
         });
 
-        alert("Cập nhật danh mục thành công");
+        toast.success("Cập nhật danh mục thành công");
       } else {
         await createCategory({
           name: categoryName.trim(),
           icon: categoryIcon,
         });
 
-        alert("Thêm danh mục thành công");
+        toast.success("Thêm danh mục thành công");
       }
 
       setCategoryName("");
@@ -791,7 +831,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log(error);
 
-      alert("Lỗi khi lưu danh mục");
+      toast.error("Lỗi khi lưu danh mục");
     }
   };
 
@@ -819,6 +859,19 @@ export default function AdminDashboard() {
 
     if (!brandName.trim()) {
       alert("Vui lòng nhập tên thương hiệu");
+
+      return;
+    }
+
+    const isDuplicatedBrand = brands.some(
+      (brand) =>
+        normalizeText(brand.name) === normalizeText(brandName.trim()) &&
+        normalizeText(brand.category) === normalizeText(brandCategory) &&
+        Number(brand.id) !== Number(editingBrandId),
+    );
+
+    if (isDuplicatedBrand) {
+      alert("Thương hiệu này đã tồn tại trong danh mục đã chọn");
 
       return;
     }
@@ -892,11 +945,11 @@ export default function AdminDashboard() {
 
       fetchCategories();
 
-      alert("Xóa danh mục thành công");
+      toast.success("Xóa danh mục thành công");
     } catch (error) {
       console.log(error);
 
-      alert("Không thể xóa danh mục này");
+      toast.error("Không thể xóa danh mục này");
     }
   };
   const handleImageUpload = async (e) => {
@@ -3759,6 +3812,174 @@ export default function AdminDashboard() {
     filteredSectionBanners,
     sectionBannerPage,
   );
+
+  const getCategoryBrandCount = (categoryNameValue) => {
+    return brands.filter(
+      (brand) =>
+        normalizeText(brand.category) === normalizeText(categoryNameValue),
+    ).length;
+  };
+
+  const getCategoryProductCount = (categoryNameValue) => {
+    return products.filter(
+      (product) =>
+        normalizeText(product.category) === normalizeText(categoryNameValue),
+    ).length;
+  };
+
+  const getBrandProductCount = (brandNameValue, categoryNameValue) => {
+    return products.filter((product) => {
+      const matchesBrand =
+        normalizeText(product.brand) === normalizeText(brandNameValue);
+
+      const matchesCategory =
+        !categoryNameValue ||
+        normalizeText(product.category) === normalizeText(categoryNameValue);
+
+      return matchesBrand && matchesCategory;
+    }).length;
+  };
+
+  const categoriesWithoutBrands = categories.filter(
+    (category) => getCategoryBrandCount(category.name) === 0,
+  );
+
+  const categoriesWithoutProducts = categories.filter(
+    (category) => getCategoryProductCount(category.name) === 0,
+  );
+
+  const mostBrandCategory = categories.reduce(
+    (bestCategory, currentCategory) => {
+      if (!bestCategory) {
+        return currentCategory;
+      }
+
+      return getCategoryBrandCount(currentCategory.name) >
+        getCategoryBrandCount(bestCategory.name)
+        ? currentCategory
+        : bestCategory;
+    },
+    null,
+  );
+
+  const filteredCategories = categories
+    .filter((category) => {
+      const keyword = normalizeText(categorySearchKeyword);
+
+      const brandCount = getCategoryBrandCount(category.name);
+      const productCount = getCategoryProductCount(category.name);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(category.id).includes(keyword) ||
+        normalizeText(category.name).includes(keyword) ||
+        normalizeText(category.icon).includes(keyword);
+
+      const matchesStatus =
+        categoryStatusFilter === "ALL" ||
+        (categoryStatusFilter === "HAS_BRAND" && brandCount > 0) ||
+        (categoryStatusFilter === "NO_BRAND" && brandCount === 0) ||
+        (categoryStatusFilter === "HAS_PRODUCT" && productCount > 0) ||
+        (categoryStatusFilter === "NO_PRODUCT" && productCount === 0);
+
+      return matchesKeyword && matchesStatus;
+    })
+    .sort((a, b) => {
+      const nameA = String(a.name || "").localeCompare(
+        String(b.name || ""),
+        "vi",
+      );
+      const nameB = String(b.name || "").localeCompare(
+        String(a.name || ""),
+        "vi",
+      );
+
+      if (categorySortMode === "ID_ASC") {
+        return Number(a.id || 0) - Number(b.id || 0);
+      }
+
+      if (categorySortMode === "NAME_ASC") {
+        return nameA;
+      }
+
+      if (categorySortMode === "NAME_DESC") {
+        return nameB;
+      }
+
+      if (categorySortMode === "BRAND_DESC") {
+        return getCategoryBrandCount(b.name) - getCategoryBrandCount(a.name);
+      }
+
+      if (categorySortMode === "PRODUCT_DESC") {
+        return (
+          getCategoryProductCount(b.name) - getCategoryProductCount(a.name)
+        );
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const categoryTotalPages = getTotalPages(filteredCategories);
+
+  const paginatedCategories = paginateItems(filteredCategories, categoryPage);
+
+  const filteredBrands = brands
+    .filter((brand) => {
+      const keyword = normalizeText(brandSearchKeyword);
+      const productCount = getBrandProductCount(brand.name, brand.category);
+
+      const matchesKeyword =
+        !keyword ||
+        normalizeText(brand.id).includes(keyword) ||
+        normalizeText(brand.name).includes(keyword) ||
+        normalizeText(brand.category).includes(keyword);
+
+      const matchesCategory =
+        brandCategoryFilter === "ALL" ||
+        normalizeText(brand.category) === normalizeText(brandCategoryFilter);
+
+      const matchesStatus =
+        brandStatusFilter === "ALL" ||
+        (brandStatusFilter === "HAS_PRODUCT" && productCount > 0) ||
+        (brandStatusFilter === "NO_PRODUCT" && productCount === 0);
+
+      return matchesKeyword && matchesCategory && matchesStatus;
+    })
+    .sort((a, b) => {
+      const nameA = String(a.name || "").localeCompare(
+        String(b.name || ""),
+        "vi",
+      );
+      const nameB = String(b.name || "").localeCompare(
+        String(a.name || ""),
+        "vi",
+      );
+
+      if (brandSortMode === "ID_ASC") {
+        return Number(a.id || 0) - Number(b.id || 0);
+      }
+
+      if (brandSortMode === "NAME_ASC") {
+        return nameA;
+      }
+
+      if (brandSortMode === "NAME_DESC") {
+        return nameB;
+      }
+
+      if (brandSortMode === "PRODUCT_DESC") {
+        return (
+          getBrandProductCount(b.name, b.category) -
+          getBrandProductCount(a.name, a.category)
+        );
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const brandTotalPages = getTotalPages(filteredBrands);
+
+  const paginatedBrands = paginateItems(filteredBrands, brandPage);
 
   const filteredProducts = products
     .filter((item) => {
@@ -8039,16 +8260,96 @@ export default function AdminDashboard() {
         )}
 
         {activeMenu === "categories" && (
-          <div className="category-admin-section">
-            <h2>Quản lý danh mục & thương hiệu</h2>
+          <div className="category-admin-section category-admin-upgrade">
+            <div className="category-admin-head">
+              <div>
+                <h2>Quản lý danh mục & thương hiệu</h2>
+                <p>
+                  Quản lý nhóm sản phẩm, thương hiệu, số lượng sản phẩm và trạng
+                  thái dữ liệu trong hệ thống.
+                </p>
+              </div>
+            </div>
 
-            <div className="category-brand-layout">
-              {/* DANH MỤC */}
+            <div className="category-stats-grid">
+              <div className="category-stat-card">
+                <span>🗂</span>
+                <div>
+                  <strong>{categories.length}</strong>
+                  <p>Tổng danh mục</p>
+                </div>
+              </div>
 
-              <div className="category-box">
-                <h3>Danh mục sản phẩm</h3>
+              <div className="category-stat-card">
+                <span>🏷️</span>
+                <div>
+                  <strong>{brands.length}</strong>
+                  <p>Tổng thương hiệu</p>
+                </div>
+              </div>
 
-                <form className="category-form" onSubmit={handleSaveCategory}>
+              <div className="category-stat-card warning">
+                <span>⚠️</span>
+                <div>
+                  <strong>{categoriesWithoutBrands.length}</strong>
+                  <p>Danh mục chưa có thương hiệu</p>
+                </div>
+              </div>
+
+              <div className="category-stat-card success">
+                <span>⭐</span>
+                <div>
+                  <strong>
+                    {mostBrandCategory
+                      ? `${mostBrandCategory.name} - ${getCategoryBrandCount(
+                          mostBrandCategory.name,
+                        )}`
+                      : "Chưa có"}
+                  </strong>
+                  <p>Danh mục nhiều thương hiệu nhất</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="promotion-tabs category-tabs">
+              <button
+                type="button"
+                className={categoryManageTab === "categories" ? "active" : ""}
+                onClick={() => setCategoryManageTab("categories")}
+              >
+                Danh mục sản phẩm
+              </button>
+
+              <button
+                type="button"
+                className={categoryManageTab === "brands" ? "active" : ""}
+                onClick={() => setCategoryManageTab("brands")}
+              >
+                Thương hiệu
+              </button>
+            </div>
+
+            {categoryManageTab === "categories" && (
+              <div className="category-box category-upgrade-card">
+                <div className="category-form-heading">
+                  <div className="category-icon-large">
+                    {categoryIcon || "📦"}
+                  </div>
+
+                  <div>
+                    <h3>
+                      {editingCategoryId
+                        ? "Cập nhật danh mục"
+                        : "Thêm danh mục mới"}
+                    </h3>
+                    <p>Chọn icon và nhập tên danh mục sản phẩm.</p>
+                  </div>
+                </div>
+
+                <form
+                  className="category-form category-form-upgrade"
+                  onSubmit={handleSaveCategory}
+                >
                   <select
                     value={categoryIcon}
                     onChange={(e) => setCategoryIcon(e.target.value)}
@@ -8059,15 +8360,16 @@ export default function AdminDashboard() {
                       </option>
                     ))}
                   </select>
+
                   <input
                     type="text"
-                    placeholder="Nhập tên danh mục..."
+                    placeholder="Nhập tên danh mục, ví dụ: Laptop"
                     value={categoryName}
                     onChange={(e) => setCategoryName(e.target.value)}
                   />
 
                   <button type="submit">
-                    {editingCategoryId ? "Cập nhật" : "Thêm"}
+                    {editingCategoryId ? "Cập nhật danh mục" : "Thêm danh mục"}
                   </button>
 
                   {editingCategoryId && (
@@ -8076,9 +8378,7 @@ export default function AdminDashboard() {
                       className="cancel-category-btn"
                       onClick={() => {
                         setEditingCategoryId(null);
-
                         setCategoryName("");
-
                         setCategoryIcon("💻");
                       }}
                     >
@@ -8087,59 +8387,174 @@ export default function AdminDashboard() {
                   )}
                 </form>
 
-                <table className="category-table">
+                <div className="admin-list-toolbar category-toolbar">
+                  <input
+                    type="text"
+                    placeholder="Tìm theo ID, tên danh mục, icon..."
+                    value={categorySearchKeyword}
+                    onChange={(event) =>
+                      setCategorySearchKeyword(event.target.value)
+                    }
+                  />
+
+                  <select
+                    value={categoryStatusFilter}
+                    onChange={(event) =>
+                      setCategoryStatusFilter(event.target.value)
+                    }
+                  >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="HAS_BRAND">Có thương hiệu</option>
+                    <option value="NO_BRAND">Chưa có thương hiệu</option>
+                    <option value="HAS_PRODUCT">Có sản phẩm</option>
+                    <option value="NO_PRODUCT">Chưa có sản phẩm</option>
+                  </select>
+
+                  <select
+                    value={categorySortMode}
+                    onChange={(event) =>
+                      setCategorySortMode(event.target.value)
+                    }
+                  >
+                    <option value="ID_DESC">Mới nhất trước</option>
+                    <option value="ID_ASC">Cũ nhất trước</option>
+                    <option value="NAME_ASC">Tên A-Z</option>
+                    <option value="NAME_DESC">Tên Z-A</option>
+                    <option value="BRAND_DESC">Nhiều thương hiệu nhất</option>
+                    <option value="PRODUCT_DESC">Nhiều sản phẩm nhất</option>
+                  </select>
+                </div>
+
+                <div className="admin-list-count">
+                  Hiển thị {paginatedCategories.length} /{" "}
+                  {filteredCategories.length} danh mục
+                </div>
+
+                <table className="category-table admin-table category-modern-table">
                   <thead>
                     <tr>
                       <th>ID</th>
-
                       <th>Icon</th>
-
                       <th>Tên danh mục</th>
-
+                      <th>Thương hiệu</th>
+                      <th>Sản phẩm</th>
+                      <th>Trạng thái</th>
                       <th>Thao tác</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {categories.map((category) => (
-                      <tr key={category.id}>
-                        <td>{category.id}</td>
-
-                        <td>
-                          <span className="category-icon-preview">
-                            {category.icon || "💻"}
-                          </span>
-                        </td>
-
-                        <td>{category.name}</td>
-
-                        <td>
-                          <button
-                            className="edit-btn"
-                            onClick={() => handleEditCategory(category)}
-                          >
-                            Sửa
-                          </button>
-
-                          <button
-                            className="delete-btn"
-                            onClick={() => handleDeleteCategory(category.id)}
-                          >
-                            Xóa
-                          </button>
+                    {paginatedCategories.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="admin-empty-cell">
+                          Không có danh mục phù hợp
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      paginatedCategories.map((category) => {
+                        const brandCount = getCategoryBrandCount(category.name);
+                        const productCount = getCategoryProductCount(
+                          category.name,
+                        );
+
+                        return (
+                          <tr key={category.id}>
+                            <td>{category.id}</td>
+
+                            <td>
+                              <span className="category-icon-preview">
+                                {category.icon || "💻"}
+                              </span>
+                            </td>
+
+                            <td>
+                              <strong className="category-main-name">
+                                {category.name}
+                              </strong>
+                            </td>
+
+                            <td>
+                              <span className="category-mini-badge blue">
+                                {brandCount} thương hiệu
+                              </span>
+                            </td>
+
+                            <td>
+                              <span className="category-mini-badge green">
+                                {productCount} sản phẩm
+                              </span>
+                            </td>
+
+                            <td>
+                              {brandCount === 0 ? (
+                                <span className="category-status-badge warning">
+                                  Chưa có thương hiệu
+                                </span>
+                              ) : productCount === 0 ? (
+                                <span className="category-status-badge danger">
+                                  Chưa có sản phẩm
+                                </span>
+                              ) : (
+                                <span className="category-status-badge active">
+                                  Đang hoạt động
+                                </span>
+                              )}
+                            </td>
+
+                            <td>
+                              <button
+                                className="edit-btn"
+                                onClick={() => handleEditCategory(category)}
+                              >
+                                Sửa
+                              </button>
+
+                              <button
+                                className="delete-btn"
+                                onClick={() =>
+                                  handleDeleteCategory(category.id)
+                                }
+                              >
+                                Xóa
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
+
+                {renderPagination(
+                  categoryPage,
+                  categoryTotalPages,
+                  setCategoryPage,
+                )}
               </div>
+            )}
 
-              {/* THƯƠNG HIỆU */}
+            {categoryManageTab === "brands" && (
+              <div className="category-box category-upgrade-card">
+                <div className="category-form-heading">
+                  <div className="category-icon-large">🏷️</div>
 
-              <div className="category-box">
-                <h3>Thương hiệu</h3>
+                  <div>
+                    <h3>
+                      {editingBrandId
+                        ? "Cập nhật thương hiệu"
+                        : "Thêm thương hiệu"}
+                    </h3>
+                    <p>
+                      Gắn thương hiệu vào đúng danh mục để lọc sản phẩm chính
+                      xác.
+                    </p>
+                  </div>
+                </div>
 
-                <form className="category-form" onSubmit={handleSaveBrand}>
+                <form
+                  className="category-form category-form-upgrade"
+                  onSubmit={handleSaveBrand}
+                >
                   <select
                     value={brandCategory}
                     onChange={(e) => setBrandCategory(e.target.value)}
@@ -8148,20 +8563,22 @@ export default function AdminDashboard() {
 
                     {categories.map((category) => (
                       <option key={category.id} value={category.name}>
-                        {category.name}
+                        {category.icon || "📦"} {category.name}
                       </option>
                     ))}
                   </select>
 
                   <input
                     type="text"
-                    placeholder="Nhập thương hiệu..."
+                    placeholder="Nhập thương hiệu, ví dụ: ASUS"
                     value={brandName}
                     onChange={(e) => setBrandName(e.target.value)}
                   />
 
                   <button type="submit">
-                    {editingBrandId ? "Cập nhật" : "Thêm"}
+                    {editingBrandId
+                      ? "Cập nhật thương hiệu"
+                      : "Thêm thương hiệu"}
                   </button>
 
                   {editingBrandId && (
@@ -8179,49 +8596,152 @@ export default function AdminDashboard() {
                   )}
                 </form>
 
-                <table className="category-table">
+                {brandCategory && (
+                  <div className="brand-category-hint">
+                    Danh mục <strong>{brandCategory}</strong> hiện có{" "}
+                    <strong>{getCategoryBrandCount(brandCategory)}</strong>{" "}
+                    thương hiệu.
+                  </div>
+                )}
+
+                <div className="admin-list-toolbar category-toolbar">
+                  <input
+                    type="text"
+                    placeholder="Tìm theo ID, tên thương hiệu, danh mục..."
+                    value={brandSearchKeyword}
+                    onChange={(event) =>
+                      setBrandSearchKeyword(event.target.value)
+                    }
+                  />
+
+                  <select
+                    value={brandCategoryFilter}
+                    onChange={(event) =>
+                      setBrandCategoryFilter(event.target.value)
+                    }
+                  >
+                    <option value="ALL">Tất cả danh mục</option>
+
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.icon || "📦"} {category.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={brandStatusFilter}
+                    onChange={(event) =>
+                      setBrandStatusFilter(event.target.value)
+                    }
+                  >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="HAS_PRODUCT">Có sản phẩm</option>
+                    <option value="NO_PRODUCT">Chưa có sản phẩm</option>
+                  </select>
+
+                  <select
+                    value={brandSortMode}
+                    onChange={(event) => setBrandSortMode(event.target.value)}
+                  >
+                    <option value="ID_DESC">Mới nhất trước</option>
+                    <option value="ID_ASC">Cũ nhất trước</option>
+                    <option value="NAME_ASC">Tên A-Z</option>
+                    <option value="NAME_DESC">Tên Z-A</option>
+                    <option value="PRODUCT_DESC">Nhiều sản phẩm nhất</option>
+                  </select>
+                </div>
+
+                <div className="admin-list-count">
+                  Hiển thị {paginatedBrands.length} / {filteredBrands.length}{" "}
+                  thương hiệu
+                </div>
+
+                <table className="category-table admin-table category-modern-table">
                   <thead>
                     <tr>
                       <th>ID</th>
-
                       <th>Danh mục</th>
-
                       <th>Tên thương hiệu</th>
-
+                      <th>Sản phẩm</th>
+                      <th>Trạng thái</th>
                       <th>Thao tác</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {brands.map((brand) => (
-                      <tr key={brand.id}>
-                        <td>{brand.id}</td>
-
-                        <td>{brand.category}</td>
-
-                        <td>{brand.name}</td>
-
-                        <td>
-                          <button
-                            className="edit-btn"
-                            onClick={() => handleEditBrand(brand)}
-                          >
-                            Sửa
-                          </button>
-
-                          <button
-                            className="delete-btn"
-                            onClick={() => handleDeleteBrand(brand.id)}
-                          >
-                            Xóa
-                          </button>
+                    {paginatedBrands.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="admin-empty-cell">
+                          Không có thương hiệu phù hợp
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      paginatedBrands.map((brand) => {
+                        const productCount = getBrandProductCount(
+                          brand.name,
+                          brand.category,
+                        );
+
+                        return (
+                          <tr key={brand.id}>
+                            <td>{brand.id}</td>
+
+                            <td>
+                              <span className="category-mini-badge blue">
+                                {brand.category}
+                              </span>
+                            </td>
+
+                            <td>
+                              <strong className="category-main-name">
+                                {brand.name}
+                              </strong>
+                            </td>
+
+                            <td>
+                              <span className="category-mini-badge green">
+                                {productCount} sản phẩm
+                              </span>
+                            </td>
+
+                            <td>
+                              {productCount > 0 ? (
+                                <span className="category-status-badge active">
+                                  Có sản phẩm
+                                </span>
+                              ) : (
+                                <span className="category-status-badge warning">
+                                  Chưa có sản phẩm
+                                </span>
+                              )}
+                            </td>
+
+                            <td>
+                              <button
+                                className="edit-btn"
+                                onClick={() => handleEditBrand(brand)}
+                              >
+                                Sửa
+                              </button>
+
+                              <button
+                                className="delete-btn"
+                                onClick={() => handleDeleteBrand(brand.id)}
+                              >
+                                Xóa
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
+
+                {renderPagination(brandPage, brandTotalPages, setBrandPage)}
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

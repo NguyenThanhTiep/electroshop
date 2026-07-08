@@ -1,19 +1,46 @@
-* {
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+:root {
+  --app-font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body {
-  font-family: Arial, sans-serif;
+html,
+body,
+#root {
+  min-height: 100%;
+  font-family: var(--app-font-family);
+}
 
+body {
   background: #f5f7fb;
+  font-family: var(--app-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body * {
+  font-family: var(--app-font-family) !important;
+}
+
+button,
+input,
+select,
+textarea,
+option {
+  font-family: var(--app-font-family) !important;
 }
 
 a {
-  text-decoration: none;
-
   color: inherit;
+  text-decoration: none;
 }
 
 button {
