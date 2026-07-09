@@ -18,6 +18,10 @@ import {
 import { createCheckout } from "../services/checkoutApi";
 
 import { applyCoupon } from "../services/couponApi";
+import { getImageUrl } from "../utils/imageUtils";
+
+const FALLBACK_PRODUCT_IMAGE =
+  "https://placehold.co/160x160/eef2ff/1e293b?text=ElectroShop";
 
 const convertPriceToNumber = (price) => {
   if (price === null || price === undefined || price === "") {
@@ -54,6 +58,21 @@ const getSelectedOptionsText = (selectedOptions) => {
   }));
 };
 
+const getCheckoutItemImageUrl = (item) => {
+  const firstSubImage = item?.images?.[0];
+
+  const rawImage =
+    item?.image ||
+    item?.productImage ||
+    item?.imageUrl ||
+    (typeof firstSubImage === "string"
+      ? firstSubImage
+      : firstSubImage?.imageUrl) ||
+    "";
+
+  return rawImage ? getImageUrl(rawImage) : FALLBACK_PRODUCT_IMAGE;
+};
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
 
@@ -84,9 +103,6 @@ export default function CheckoutPage() {
       return null;
     }
   }, []);
-
-  const userId =
-    currentUser?.id ?? currentUser?.userId ?? currentUser?.user?.id;
 
   const defaultFullName =
     currentUser?.fullName ||
@@ -253,10 +269,6 @@ export default function CheckoutPage() {
   };
 
   const validateForm = () => {
-    if (!userId) {
-      return "Không tìm thấy tài khoản đăng nhập";
-    }
-
     if (cartItems.length === 0) {
       return "Giỏ hàng đang trống";
     }
@@ -338,8 +350,6 @@ export default function CheckoutPage() {
       const checkoutSource = sessionStorage.getItem("checkoutSource") || "CART";
 
       const checkoutData = {
-        userId: Number(userId),
-
         customerName: formData.customerName.trim(),
 
         email: formData.email.trim(),
@@ -688,7 +698,14 @@ export default function CheckoutPage() {
                 return (
                   <article className="checkout-product-item" key={itemKey}>
                     <div className="checkout-product-image">
-                      <img src={item.image} alt={item.name} />
+                      <img
+                        src={getCheckoutItemImageUrl(item)}
+                        alt={item.name || "Sản phẩm"}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = FALLBACK_PRODUCT_IMAGE;
+                        }}
+                      />
 
                       <span>{quantity}</span>
                     </div>

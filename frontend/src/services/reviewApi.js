@@ -26,10 +26,6 @@ export const updateReview = async (reviewId, review) => {
   return response.data;
 };
 
-export const deleteReview = async (reviewId, userId) => {
-  await axios.delete(`${API_URL}/${reviewId}`, {
-    params: {
-      userId,
-    },
-  });
+export const deleteReview = async (reviewId) => {
+  await axios.delete(`${API_URL}/${reviewId}`);
 };

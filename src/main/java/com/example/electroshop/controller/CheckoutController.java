@@ -8,7 +8,9 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/checkout")
@@ -27,14 +29,26 @@ public class CheckoutController {
     @PostMapping
     public ResponseEntity<CheckoutResponse> checkout(
             @RequestBody CheckoutRequest request,
+            Authentication authentication,
             HttpServletRequest httpRequest
     ) {
+        if (
+                authentication == null ||
+                authentication.getName() == null
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Bạn chưa đăng nhập"
+            );
+        }
+
         String clientIp =
                 getClientIp(httpRequest);
 
         CheckoutResponse response =
                 checkoutService.checkout(
                         request,
+                        authentication.getName(),
                         clientIp
                 );
 

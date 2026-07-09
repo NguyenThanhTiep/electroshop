@@ -119,17 +119,18 @@ public class CheckoutService {
     @Transactional
     public CheckoutResponse checkout(
             CheckoutRequest request,
+            String authenticatedEmail,
             String clientIp
     ) {
         validateRequest(request);
 
         User user =
                 userRepository
-                        .findById(request.getUserId())
+                        .findByEmail(authenticatedEmail)
                         .orElseThrow(() ->
                                 new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Tài khoản không tồn tại"
+                                        HttpStatus.UNAUTHORIZED,
+                                        "Tài khoản JWT không tồn tại"
                                 )
                         );
 
@@ -472,13 +473,6 @@ public class CheckoutService {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Dữ liệu thanh toán không hợp lệ"
-            );
-        }
-
-        if (request.getUserId() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Chưa xác định người đặt hàng"
             );
         }
 

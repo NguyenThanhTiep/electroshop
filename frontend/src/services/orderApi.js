@@ -36,6 +36,12 @@ export const getOrderById = async (id) => {
   return response.data;
 };
 
+export const getOrderByUser = async (userId, orderId) => {
+  const response = await axios.get(`${API_URL}/user/${userId}/${orderId}`);
+
+  return response.data;
+};
+
 /*
  * Admin cập nhật trạng thái đơn.
  */

@@ -12,6 +12,12 @@ import Header from "../components/Header";
 
 import Footer from "../components/Footer";
 
+const normalizeRole = (role) =>
+  String(role || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+
 export default function LoginPage() {
   const navigate = useNavigate();
 
@@ -70,7 +76,7 @@ export default function LoginPage() {
       window.dispatchEvent(new Event("authChanged"));
       window.dispatchEvent(new Event("cartUpdated"));
 
-      if (response.role === "admin") {
+      if (normalizeRole(response.role) === "ADMIN") {
         navigate("/admin");
       } else {
         const redirectAfterLogin = sessionStorage.getItem("redirectAfterLogin");

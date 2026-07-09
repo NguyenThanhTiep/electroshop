@@ -80,6 +80,10 @@ export default function ProductDetail() {
 
   const [productLoading, setProductLoading] = useState(true);
 
+  const [productError, setProductError] = useState(null);
+
+  const [productRetryKey, setProductRetryKey] = useState(0);
+
   const [relatedLoading, setRelatedLoading] = useState(false);
 
   const [activeFlashSaleProduct, setActiveFlashSaleProduct] = useState(null);
@@ -123,10 +127,8 @@ export default function ProductDetail() {
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
 
-    if (requestedTab === "reviews") {
-      setActiveTab("reviews");
-    }
-  }, [searchParams]);
+    setActiveTab(requestedTab === "reviews" ? "reviews" : "description");
+  }, [id, searchParams]);
   const parseJsonArray = (data) => {
     try {
       if (!data) {
@@ -569,6 +571,7 @@ export default function ProductDetail() {
     const fetchProduct = async () => {
       setProductLoading(true);
       setRelatedLoading(true);
+      setProductError(null);
       setProduct({});
       setSelectedImage("");
       setQuantity(1);
@@ -590,6 +593,7 @@ export default function ProductDetail() {
         }
 
         setProduct(productData);
+        setProductError(null);
         setSelectedImage(getImageUrl(productData.image));
         setQuantity(1);
         setThumbStart(0);
@@ -644,9 +648,22 @@ export default function ProductDetail() {
           return;
         }
 
-        console.error("Khong the tai san pham:", error);
+        console.error("Không thể tải sản phẩm:", error);
+
+        const statusCode = error.response?.status;
 
         setProduct({});
+        setProductError({
+          code: statusCode === 404 ? "404" : "Lỗi",
+          title:
+            statusCode === 404
+              ? "Không tìm thấy sản phẩm"
+              : "Không thể tải sản phẩm",
+          description:
+            statusCode === 404
+              ? "Sản phẩm này không tồn tại hoặc đã ngừng hiển thị."
+              : "Kết nối tới máy chủ đang gặp sự cố. Vui lòng thử lại sau.",
+        });
         setActiveFlashSaleProduct(null);
         setActivePromotion(null);
         setReviewSummary(DEFAULT_REVIEW_SUMMARY);
@@ -666,7 +683,7 @@ export default function ProductDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, productRetryKey]);
 
   useEffect(() => {
     if (productOptions.length === 0) {
@@ -830,6 +847,47 @@ export default function ProductDetail() {
 
     return queryString ? `/search?${queryString}` : "/search";
   };
+
+  const handleRetryProduct = () => {
+    setProductRetryKey((currentKey) => currentKey + 1);
+  };
+
+  if (!productLoading && productError) {
+    return (
+      <>
+        <Header />
+
+        <div className="product-detail-breadcrumb-wrap">
+          <nav className="product-detail-breadcrumb" aria-label="breadcrumb">
+            <Link to="/" className="product-detail-breadcrumb-home">
+              <span>⌂</span>
+              Trang chủ
+            </Link>
+          </nav>
+        </div>
+
+        <main className="product-detail-page">
+          <section className="product-detail-error-state">
+            <span>{productError.code}</span>
+            <h1>{productError.title}</h1>
+            <p>{productError.description}</p>
+
+            <div className="product-detail-error-actions">
+              <button type="button" onClick={handleRetryProduct}>
+                Thử lại
+              </button>
+
+              <button type="button" onClick={() => navigate("/")}>
+                Về trang chủ
+              </button>
+            </div>
+          </section>
+        </main>
+
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
