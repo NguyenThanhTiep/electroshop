@@ -336,7 +336,7 @@ export default function CartPage() {
                 PC và phụ kiện tại ElectroShop.
               </p>
 
-              <button onClick={() => (window.location.href = "/")}>
+              <button type="button" onClick={() => navigate("/")}>
                 Tiếp tục mua sắm
               </button>
             </section>
@@ -618,8 +618,9 @@ export default function CartPage() {
                   </button>
 
                   <button
+                    type="button"
                     className="continue-shopping-btn"
-                    onClick={() => (window.location.href = "/")}
+                    onClick={() => navigate("/")}
                   >
                     Tiếp tục mua sắm
                   </button>

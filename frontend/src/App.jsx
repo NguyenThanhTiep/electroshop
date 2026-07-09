@@ -15,6 +15,7 @@ import SearchPage from "./pages/SearchPage";
 import ContactPage from "./pages/ContactPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PaymentResultPage from "./pages/PaymentResultPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 function App() {
   return (
@@ -76,6 +77,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </div>
   );

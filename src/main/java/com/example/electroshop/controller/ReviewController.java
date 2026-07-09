@@ -7,7 +7,9 @@ import com.example.electroshop.dto.review.ReviewSummaryResponse;
 import com.example.electroshop.service.ReviewService;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -53,22 +55,28 @@ public class ReviewController {
     @ResponseStatus(HttpStatus.CREATED)
     public ReviewResponse createReview(
             @RequestBody
-            ReviewRequest request
+            ReviewRequest request,
+            Authentication authentication
     ) {
         return reviewService
-                .createReview(request);
+                .createReview(
+                        request,
+                        getAuthenticatedEmail(authentication)
+                );
     }
 
     @PutMapping("/{reviewId}")
     public ReviewResponse updateReview(
             @PathVariable Long reviewId,
             @RequestBody
-            ReviewRequest request
+            ReviewRequest request,
+            Authentication authentication
     ) {
         return reviewService
                 .updateReview(
                         reviewId,
-                        request
+                        request,
+                        getAuthenticatedEmail(authentication)
                 );
     }
 
@@ -76,11 +84,27 @@ public class ReviewController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteReview(
             @PathVariable Long reviewId,
-            @RequestParam Long userId
+            Authentication authentication
     ) {
         reviewService.deleteReview(
                 reviewId,
-                userId
+                getAuthenticatedEmail(authentication)
         );
+    }
+
+    private String getAuthenticatedEmail(
+            Authentication authentication
+    ) {
+        if (
+                authentication == null ||
+                authentication.getName() == null
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Bạn chưa đăng nhập"
+            );
+        }
+
+        return authentication.getName();
     }
 }

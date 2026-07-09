@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import { getOrderById } from "../services/orderApi";
+import { getOrderById, getOrderByUser } from "../services/orderApi";
 import { getImageUrl } from "../utils/imageUtils";
 
 const ORDER_TIMELINE = [
@@ -115,6 +115,30 @@ const getOrderItemImage = (item) => {
   );
 };
 
+const readCurrentUser = () => {
+  try {
+    const savedUser = localStorage.getItem("currentUser");
+
+    return savedUser ? JSON.parse(savedUser) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getCurrentUserId = (currentUser) => {
+  const userId = currentUser?.id ?? currentUser?.userId ?? currentUser?.user?.id;
+
+  return Number(userId || 0);
+};
+
+const normalizeRole = (role) =>
+  String(role || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+
+const isAdminRole = (role) => normalizeRole(role) === "ADMIN";
+
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -129,14 +153,40 @@ export default function OrderDetailPage() {
         setLoading(true);
         setErrorMessage("");
 
-        const data = await getOrderById(id);
+        const currentUser = readCurrentUser();
+        const currentUserId = getCurrentUserId(currentUser);
+        const currentRole =
+          localStorage.getItem("role") ||
+          currentUser?.role ||
+          currentUser?.user?.role ||
+          "";
+
+        if (!isAdminRole(currentRole) && !currentUserId) {
+          throw new Error("Không tìm thấy tài khoản đăng nhập.");
+        }
+
+        const data = isAdminRole(currentRole)
+          ? await getOrderById(id)
+          : await getOrderByUser(currentUserId, id);
 
         setOrder(data || null);
       } catch (error) {
         console.error("Không thể tải chi tiết đơn hàng:", error);
-        setErrorMessage(
-          "Không thể tải chi tiết đơn hàng. Vui lòng thử lại sau.",
-        );
+
+        const statusCode = error.response?.status;
+
+        if (statusCode === 401) {
+          setErrorMessage("Vui lòng đăng nhập để xem đơn hàng.");
+        } else if (statusCode === 403) {
+          setErrorMessage("Bạn không có quyền xem đơn hàng này.");
+        } else if (statusCode === 404) {
+          setErrorMessage("Đơn hàng không tồn tại hoặc không thuộc tài khoản này.");
+        } else {
+          setErrorMessage(
+            error.message ||
+              "Không thể tải chi tiết đơn hàng. Vui lòng thử lại sau.",
+          );
+        }
       } finally {
         setLoading(false);
       }

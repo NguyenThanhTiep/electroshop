@@ -463,6 +463,9 @@ export default function SearchPage() {
     };
   };
 
+  const getEffectivePriceValue = (product) =>
+    Number(getEffectiveSearchPrice(product).finalPrice || 0);
+
   const searchResults = useMemo(() => {
     const selectedProductIds = productIdsParam
       .split(",")
@@ -524,13 +527,13 @@ export default function SearchPage() {
 
       if (minPrice > 0) {
         result = result.filter(
-          (product) => Number(product.price || 0) >= minPrice,
+          (product) => getEffectivePriceValue(product) >= minPrice,
         );
       }
 
       if (maxPrice > 0) {
         result = result.filter(
-          (product) => Number(product.price || 0) <= maxPrice,
+          (product) => getEffectivePriceValue(product) <= maxPrice,
         );
       }
 
@@ -555,11 +558,11 @@ export default function SearchPage() {
       }
 
       if (sortParam === "price-asc") {
-        result.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+        result.sort((a, b) => getEffectivePriceValue(a) - getEffectivePriceValue(b));
       }
 
       if (sortParam === "price-desc") {
-        result.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+        result.sort((a, b) => getEffectivePriceValue(b) - getEffectivePriceValue(a));
       }
 
       if (sortParam === "newest") {
@@ -615,6 +618,8 @@ export default function SearchPage() {
 
   const bannerDisplayProducts = useMemo(() => {
     let result = [...bannerProducts];
+    const minPrice = Number(minPriceParam) || 0;
+    const maxPrice = Number(maxPriceParam) || 0;
 
     if (dealParam === "flash-sale") {
       result = result.filter((product) =>
@@ -636,12 +641,24 @@ export default function SearchPage() {
       result = result.filter((product) => Number(product.stock || 0) > 0);
     }
 
+    if (minPrice > 0) {
+      result = result.filter(
+        (product) => getEffectivePriceValue(product) >= minPrice,
+      );
+    }
+
+    if (maxPrice > 0) {
+      result = result.filter(
+        (product) => getEffectivePriceValue(product) <= maxPrice,
+      );
+    }
+
     if (sortParam === "price-asc") {
-      result.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+      result.sort((a, b) => getEffectivePriceValue(a) - getEffectivePriceValue(b));
     }
 
     if (sortParam === "price-desc") {
-      result.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+      result.sort((a, b) => getEffectivePriceValue(b) - getEffectivePriceValue(a));
     }
 
     if (sortParam === "newest") {
@@ -659,6 +676,8 @@ export default function SearchPage() {
     return result;
   }, [
     bannerProducts,
+    minPriceParam,
+    maxPriceParam,
     dealParam,
     stockParam,
     sortParam,

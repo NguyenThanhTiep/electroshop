@@ -154,7 +154,19 @@ public class OrderController {
     }
 
     private boolean isAdmin(User user) {
-        return user.getRole() != null &&
-                user.getRole().equalsIgnoreCase("admin");
+        if (
+                user == null ||
+                user.getRole() == null
+        ) {
+            return false;
+        }
+
+        String role =
+                user.getRole()
+                        .trim()
+                        .toUpperCase()
+                        .replaceFirst("^ROLE_", "");
+
+        return "ADMIN".equals(role);
     }
 }

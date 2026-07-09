@@ -128,7 +128,8 @@ public class ReviewService {
 
     @Transactional
     public ReviewResponse createReview(
-            ReviewRequest request
+            ReviewRequest request,
+            String authenticatedEmail
     ) {
         validateRequest(request);
 
@@ -137,21 +138,15 @@ public class ReviewService {
         );
 
         User user =
-                userRepository
-                        .findById(
-                                request.getUserId()
-                        )
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Không tìm thấy tài khoản"
-                                )
-                        );
+                getAuthenticatedUser(authenticatedEmail);
+
+        Long userId =
+                user.getId();
 
         boolean hasCompletedOrder =
                 orderRepository
                         .existsOrderContainingProduct(
-                                request.getUserId(),
+                                userId,
                                 request.getProductId(),
                                 OrderStatus.COMPLETED
                         );
@@ -167,7 +162,7 @@ public class ReviewService {
                 reviewRepository
                         .existsByProductIdAndUserId(
                                 request.getProductId(),
-                                request.getUserId()
+                                userId
                         )
         ) {
             throw new ResponseStatusException(
@@ -192,7 +187,7 @@ public class ReviewService {
                                 request.getProductId()
                         )
                         .userId(
-                                request.getUserId()
+                                userId
                         )
                         .userName(userName)
                         .rating(
@@ -213,9 +208,13 @@ public class ReviewService {
     @Transactional
     public ReviewResponse updateReview(
             Long reviewId,
-            ReviewRequest request
+            ReviewRequest request,
+            String authenticatedEmail
     ) {
         validateRequest(request);
+
+        User user =
+                getAuthenticatedUser(authenticatedEmail);
 
         Review review =
                 reviewRepository
@@ -230,7 +229,7 @@ public class ReviewService {
         if (
                 !review.getUserId()
                         .equals(
-                                request.getUserId()
+                                user.getId()
                         )
         ) {
             throw new ResponseStatusException(
@@ -255,8 +254,11 @@ public class ReviewService {
     @Transactional
     public void deleteReview(
             Long reviewId,
-            Long userId
+            String authenticatedEmail
     ) {
+        User user =
+                getAuthenticatedUser(authenticatedEmail);
+
         Review review =
                 reviewRepository
                         .findById(reviewId)
@@ -269,7 +271,7 @@ public class ReviewService {
 
         if (
                 !review.getUserId()
-                        .equals(userId)
+                        .equals(user.getId())
         ) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -280,13 +282,35 @@ public class ReviewService {
         reviewRepository.delete(review);
     }
 
+    private User getAuthenticatedUser(
+            String authenticatedEmail
+    ) {
+        if (
+                authenticatedEmail == null ||
+                authenticatedEmail.isBlank()
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Bạn chưa đăng nhập"
+            );
+        }
+
+        return userRepository
+                .findByEmail(authenticatedEmail)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "Tài khoản JWT không tồn tại"
+                        )
+                );
+    }
+
     private void validateRequest(
             ReviewRequest request
     ) {
         if (
                 request == null ||
-                request.getProductId() == null ||
-                request.getUserId() == null
+                request.getProductId() == null
         ) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,

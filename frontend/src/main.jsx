@@ -7,6 +7,42 @@ import axios from "axios";
 import App from "./App";
 import "./index.css";
 
+let handlingUnauthorized = false;
+
+const isAuthEndpoint = (url = "") => {
+  return String(url).includes("/api/auth/");
+};
+
+const clearAuthStorage = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  localStorage.removeItem("currentUser");
+};
+
+const redirectToLoginAfterUnauthorized = () => {
+  if (handlingUnauthorized) {
+    return;
+  }
+
+  handlingUnauthorized = true;
+
+  const currentPath =
+    window.location.pathname + window.location.search + window.location.hash;
+
+  if (window.location.pathname !== "/login" && currentPath) {
+    sessionStorage.setItem("redirectAfterLogin", currentPath);
+  }
+
+  clearAuthStorage();
+
+  window.dispatchEvent(new Event("authChanged"));
+  window.dispatchEvent(new Event("cartUpdated"));
+
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
+};
+
 /*
  * Gắn token cho toàn bộ request axios.
  * Các file như productApi.js, categoryApi.js, orderApi.js...
@@ -24,6 +60,21 @@ axios.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error),
+);
+
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const statusCode = error.response?.status;
+    const requestUrl = error.config?.url || "";
+    const hadToken = Boolean(localStorage.getItem("token"));
+
+    if (statusCode === 401 && hadToken && !isAuthEndpoint(requestUrl)) {
+      redirectToLoginAfterUnauthorized();
+    }
+
+    return Promise.reject(error);
+  },
 );
 
 /*

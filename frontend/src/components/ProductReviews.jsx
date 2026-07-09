@@ -27,6 +27,32 @@ const formatDate = (value) => {
   return new Date(value).toLocaleString("vi-VN");
 };
 
+const renderRatingStars = (value) => {
+  const rating = Math.max(0, Math.min(5, Number(value || 0)));
+  const filledPercent = `${(rating / 5) * 100}%`;
+
+  return (
+    <span
+      className="review-rating-stars"
+      aria-label={`${rating.toFixed(1)} trên 5 sao`}
+      title={`${rating.toFixed(1)} / 5`}
+    >
+      <span className="review-stars-empty" aria-hidden="true">
+        ★★★★★
+      </span>
+      <span
+        className="review-stars-filled"
+        style={{
+          width: filledPercent,
+        }}
+        aria-hidden="true"
+      >
+        ★★★★★
+      </span>
+    </span>
+  );
+};
+
 export default function ProductReviews({ productId, onSummaryChange }) {
   const [reviews, setReviews] = useState([]);
 
@@ -128,8 +154,6 @@ export default function ProductReviews({ productId, onSummaryChange }) {
       const payload = {
         productId: Number(productId),
 
-        userId,
-
         rating,
 
         comment: comment.trim(),
@@ -165,7 +189,7 @@ export default function ProductReviews({ productId, onSummaryChange }) {
     }
 
     try {
-      await deleteReview(myReview.id, userId);
+      await deleteReview(myReview.id);
 
       setSuccessMessage("Đã xóa đánh giá");
 
@@ -184,7 +208,9 @@ export default function ProductReviews({ productId, onSummaryChange }) {
         <div className="review-score">
           <strong>{Number(summary.averageRating || 0).toFixed(1)}</strong>
 
-          <div className="review-summary-stars">★★★★★</div>
+          <div className="review-summary-stars">
+            {renderRatingStars(summary.averageRating)}
+          </div>
 
           <span>{summary.totalReviews || 0} đánh giá</span>
         </div>
@@ -275,9 +301,7 @@ export default function ProductReviews({ productId, onSummaryChange }) {
               </div>
 
               <div className="review-card-stars">
-                {"★".repeat(review.rating)}
-
-                <span>{"★".repeat(5 - review.rating)}</span>
+                {renderRatingStars(review.rating)}
               </div>
 
               <p>{review.comment}</p>

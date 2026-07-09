@@ -79,7 +79,8 @@ public class JwtAuthenticationFilter
                                     : user
                                             .getRole()
                                             .trim()
-                                            .toUpperCase();
+                                            .toUpperCase()
+                                            .replaceFirst("^ROLE_", "");
 
                     SimpleGrantedAuthority authority =
                             new SimpleGrantedAuthority(

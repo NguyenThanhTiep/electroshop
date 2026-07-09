@@ -7,9 +7,8 @@ import java.util.List;
 public class CheckoutRequest {
 
     /*
-     * Tạm thời lấy từ localStorage.
-     * Sau này khi có JWT sẽ lấy từ token,
-     * không lấy trực tiếp từ frontend.
+     * Legacy field kept for older clients.
+     * Backend ignores this value and uses the authenticated JWT account.
      */
     private Long userId;
 

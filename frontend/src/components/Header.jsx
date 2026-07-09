@@ -8,13 +8,8 @@ import {
   UserRound,
   PackageCheck,
   ShoppingCart,
-  Menu,
   Flame,
-  Monitor,
-  Laptop,
-  Gamepad2,
   Tag,
-  Cpu,
   Sparkles,
   Star,
   BadgePercent,
@@ -25,8 +20,27 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getProducts } from "../services/productApi";
 
 import { getCart } from "../utils/cartUtils";
+import { getImageUrl } from "../utils/imageUtils";
 
 const SEARCH_SUGGESTION_LIMIT = 20;
+
+const FALLBACK_PRODUCT_IMAGE =
+  "https://placehold.co/160x160/eef2ff/1e293b?text=ElectroShop";
+
+const getProductImageUrl = (product) => {
+  const firstSubImage = product?.images?.[0];
+
+  const rawImage =
+    product?.image ||
+    product?.productImage ||
+    product?.imageUrl ||
+    (typeof firstSubImage === "string"
+      ? firstSubImage
+      : firstSubImage?.imageUrl) ||
+    "";
+
+  return rawImage ? getImageUrl(rawImage) : FALLBACK_PRODUCT_IMAGE;
+};
 
 export default function Header() {
   const navigate = useNavigate();
@@ -359,7 +373,14 @@ export default function Header() {
                             key={product.id}
                             onClick={() => handleGoProduct(product.id)}
                           >
-                            <img src={product.image} alt={product.name} />
+                            <img
+                              src={getProductImageUrl(product)}
+                              alt={product.name}
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = FALLBACK_PRODUCT_IMAGE;
+                              }}
+                            />
 
                             <div>
                               <h4>{product.name}</h4>
@@ -437,7 +458,14 @@ export default function Header() {
                           <p>{formatPrice(product.price)}</p>
                         </div>
 
-                        <img src={product.image} alt={product.name} />
+                        <img
+                          src={getProductImageUrl(product)}
+                          alt={product.name}
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = FALLBACK_PRODUCT_IMAGE;
+                          }}
+                        />
                       </div>
                     ))}
                   </div>

@@ -1,14 +1,38 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+
+const normalizeRole = (role) =>
+  String(role || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "");
+
+const readStoredUserRole = () => {
+  try {
+    const savedUser = localStorage.getItem("currentUser");
+
+    return savedUser ? JSON.parse(savedUser)?.role || "" : "";
+  } catch {
+    return "";
+  }
+};
 
 export default function ProtectedRoute({ children, allowedRole }) {
+  const location = useLocation();
+
   const token = localStorage.getItem("token");
 
-  const role = localStorage.getItem("role");
+  const role = localStorage.getItem("role") || readStoredUserRole();
 
   /*
    * Chưa đăng nhập.
    */
   if (!token) {
+    const redirectPath = `${location.pathname}${location.search}${location.hash}`;
+
+    if (redirectPath && location.pathname !== "/login") {
+      sessionStorage.setItem("redirectAfterLogin", redirectPath);
+    }
+
     return <Navigate to="/login" replace />;
   }
 
@@ -19,7 +43,7 @@ export default function ProtectedRoute({ children, allowedRole }) {
    * user thường truy cập /admin
    * → chuyển về trang chủ.
    */
-  if (allowedRole && role !== allowedRole) {
+  if (allowedRole && normalizeRole(role) !== normalizeRole(allowedRole)) {
     return <Navigate to="/" replace />;
   }
 
