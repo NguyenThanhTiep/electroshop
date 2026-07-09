@@ -5,6 +5,8 @@ import {
   getBanners,
   createBanner,
   updateBanner,
+  getBannerDetail,
+  setBannerProducts,
   deleteBanner,
 } from "../services/bannerApi";
 
@@ -2256,7 +2258,9 @@ export default function AdminDashboard() {
         return;
       }
 
-      resolvedTargetUrl = `/search?productIds=${selectedBannerProductIds.join(",")}`;
+      resolvedTargetUrl = editingBannerId
+        ? `/search?homeBannerId=${editingBannerId}`
+        : "/search";
       resolvedLinkUrl = resolvedTargetUrl;
     }
 
@@ -2284,12 +2288,18 @@ export default function AdminDashboard() {
     };
 
     try {
+      let savedBanner = null;
+
       if (editingBannerId) {
-        await updateBanner(editingBannerId, payload);
+        savedBanner = await updateBanner(editingBannerId, payload);
         toast.success("Cập nhật banner thành công");
       } else {
-        await createBanner(payload);
+        savedBanner = await createBanner(payload);
         toast.success("Thêm banner thành công");
+      }
+
+      if (bannerForm.targetType === "COLLECTION" && savedBanner?.id) {
+        await setBannerProducts(savedBanner.id, selectedBannerProductIds);
       }
 
       resetBannerForm();
@@ -2300,7 +2310,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleEditBanner = (banner) => {
+  const handleEditBanner = async (banner) => {
     setEditingBannerId(banner.id);
 
     setSelectedBannerProductIds(
@@ -2326,6 +2336,20 @@ export default function AdminDashboard() {
       top: 0,
       behavior: "smooth",
     });
+
+    try {
+      const detail = await getBannerDetail(banner.id);
+
+      const productIds = Array.isArray(detail?.products)
+        ? detail.products.map((product) => Number(product.id))
+        : [];
+
+      if (productIds.length > 0) {
+        setSelectedBannerProductIds(productIds);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleDeleteBanner = async (id) => {

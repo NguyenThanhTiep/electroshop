@@ -23,7 +23,7 @@ public class Banner {
     @Column(length = 1000)
     private String imageUrl;
 
-    @Column(length = 1000)
+    @Column(length = 10000)
     private String linkUrl;
 
     private String position;
@@ -46,7 +46,7 @@ public class Banner {
     @Builder.Default
     private String targetType = "COLLECTION";
 
-    @Column(length = 1000)
+    @Column(length = 10000)
     private String targetUrl;
 
     private Long targetProductId;

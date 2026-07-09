@@ -1,6 +1,9 @@
 package com.example.electroshop.controller;
 
+import com.example.electroshop.dto.BannerDetailResponse;
+import com.example.electroshop.dto.HomeBannerProductRequest;
 import com.example.electroshop.entity.Banner;
+import com.example.electroshop.entity.Product;
 import com.example.electroshop.service.BannerService;
 
 import lombok.RequiredArgsConstructor;
@@ -59,6 +62,34 @@ public class BannerController {
                 id,
                 banner
         );
+    }
+
+    @GetMapping("/{id}/detail")
+    public BannerDetailResponse getBannerDetail(
+            @PathVariable Long id
+    ) {
+
+        return bannerService.getBannerDetail(id);
+    }
+
+    @PostMapping("/{id}/products")
+    public BannerDetailResponse setBannerProducts(
+            @PathVariable Long id,
+            @RequestBody HomeBannerProductRequest request
+    ) {
+
+        return bannerService.setBannerProducts(
+                id,
+                request
+        );
+    }
+
+    @GetMapping("/{id}/products")
+    public List<Product> getBannerProducts(
+            @PathVariable Long id
+    ) {
+
+        return bannerService.getBannerProducts(id);
     }
 
     @DeleteMapping("/{id}")

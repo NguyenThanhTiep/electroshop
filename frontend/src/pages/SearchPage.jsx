@@ -10,13 +10,15 @@ import HomeProductCard from "../components/home/HomeProductCard";
 
 import { getProducts } from "../services/productApi";
 
+import { getBannerDetail } from "../services/bannerApi";
+
 import { getSectionBannerDetail } from "../services/homeSectionBannerApi";
 
 import { getActivePromotions } from "../services/promotionApi";
 
 import { getActiveFlashSale } from "../services/flashSaleApi";
 
-const SEARCH_PAGE_SIZE = 12;
+const SEARCH_PAGE_SIZE = 15;
 
 const SEARCH_CACHE_TTL = 5 * 60 * 1000;
 
@@ -140,11 +142,15 @@ export default function SearchPage() {
 
   const bannerIdParam = searchParams.get("bannerId") || "";
 
+  const homeBannerIdParam = searchParams.get("homeBannerId") || "";
+
   const productIdsParam = searchParams.get("productIds") || "";
 
   const dealParam = searchParams.get("deal") || "";
 
   const stockParam = searchParams.get("stock") || "";
+
+  const isBannerCollection = Boolean(bannerIdParam || homeBannerIdParam);
 
   const [products, setProducts] = useState(initialSearchData.products);
 
@@ -174,8 +180,13 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
-    fetchBannerProducts(bannerIdParam);
-  }, [bannerIdParam]);
+    if (homeBannerIdParam) {
+      fetchBannerProducts(homeBannerIdParam, "home");
+      return;
+    }
+
+    fetchBannerProducts(bannerIdParam, "section");
+  }, [bannerIdParam, homeBannerIdParam]);
 
   const loadInitialSearchData = async () => {
     const cachedData = readTimedCache(SEARCH_DATA_CACHE_KEY);
@@ -229,14 +240,14 @@ export default function SearchPage() {
     }
   };
 
-  const fetchBannerProducts = async (bannerId) => {
+  const fetchBannerProducts = async (bannerId, bannerSource = "section") => {
     if (!bannerId) {
       setBannerInfo(null);
       setBannerProducts([]);
       return;
     }
 
-    const cacheKey = `${SEARCH_BANNER_CACHE_PREFIX}${bannerId}`;
+    const cacheKey = `${SEARCH_BANNER_CACHE_PREFIX}${bannerSource}.${bannerId}`;
 
     const cachedDetail = readTimedCache(cacheKey);
 
@@ -253,7 +264,10 @@ export default function SearchPage() {
     }
 
     try {
-      const detail = await getSectionBannerDetail(bannerId);
+      const detail =
+        bannerSource === "home"
+          ? await getBannerDetail(bannerId)
+          : await getSectionBannerDetail(bannerId);
 
       const normalizedDetail = normalizeBannerDetail(detail);
 
@@ -571,7 +585,7 @@ export default function SearchPage() {
      * tránh banner bị hiển thị sai sản phẩm.
      */
     if (
-      !bannerIdParam &&
+      !isBannerCollection &&
       !productIdsParam &&
       categoryParam &&
       brandParam &&
@@ -590,6 +604,7 @@ export default function SearchPage() {
     maxPriceParam,
     sortParam,
     bannerIdParam,
+    homeBannerIdParam,
     productIdsParam,
     dealParam,
     stockParam,
@@ -598,14 +613,77 @@ export default function SearchPage() {
     activeFlashSale,
   ]);
 
-  const displayedProducts = bannerIdParam ? bannerProducts : searchResults;
+  const bannerDisplayProducts = useMemo(() => {
+    let result = [...bannerProducts];
+
+    if (dealParam === "flash-sale") {
+      result = result.filter((product) =>
+        Boolean(getFlashSaleItemForProduct(product.id)),
+      );
+    } else if (dealParam === "promotion") {
+      result = result.filter((product) =>
+        Boolean(getPromotionForProduct(product.id)),
+      );
+    } else if (dealParam === "active") {
+      result = result.filter((product) => {
+        const priceInfo = getEffectiveSearchPrice(product);
+
+        return priceInfo.priceSource !== "REGULAR";
+      });
+    }
+
+    if (stockParam === "in-stock") {
+      result = result.filter((product) => Number(product.stock || 0) > 0);
+    }
+
+    if (sortParam === "price-asc") {
+      result.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    }
+
+    if (sortParam === "price-desc") {
+      result.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    }
+
+    if (sortParam === "newest") {
+      result.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    }
+
+    if (sortParam === "sold-desc") {
+      result.sort(
+        (a, b) =>
+          Number(b.soldQuantity || b.sold || 0) -
+          Number(a.soldQuantity || a.sold || 0),
+      );
+    }
+
+    return result;
+  }, [
+    bannerProducts,
+    dealParam,
+    stockParam,
+    sortParam,
+    activePromotions,
+    activeFlashSale,
+  ]);
+
+  const displayedProducts = isBannerCollection
+    ? bannerDisplayProducts
+    : searchResults;
 
   const isSearchLoading =
-    loadingProducts || Boolean(bannerIdParam && loadingBanner);
+    loadingProducts || Boolean(isBannerCollection && loadingBanner);
 
   const visibleProducts = displayedProducts.slice(0, visibleProductCount);
 
   const hasMoreProducts = visibleProductCount < displayedProducts.length;
+
+  const visibleProgressPercent =
+    displayedProducts.length > 0
+      ? Math.min(
+          100,
+          Math.round((visibleProducts.length / displayedProducts.length) * 100),
+        )
+      : 0;
 
   useEffect(() => {
     setVisibleProductCount(SEARCH_PAGE_SIZE);
@@ -617,6 +695,7 @@ export default function SearchPage() {
     maxPriceParam,
     sortParam,
     bannerIdParam,
+    homeBannerIdParam,
     productIdsParam,
     dealParam,
     stockParam,
@@ -628,7 +707,7 @@ export default function SearchPage() {
     .map((id) => id.trim())
     .filter((id) => id !== "");
 
-  const searchModeClass = bannerIdParam
+  const searchModeClass = isBannerCollection
     ? "banner-search-page"
     : productIdsParam
       ? "collection-search-page"
@@ -687,7 +766,7 @@ export default function SearchPage() {
     dealParam === "active" && "Đang giảm giá",
     stockParam === "in-stock" && "Còn hàng",
     productIdsParam && `Gợi ý chọn lọc: ${selectedProductIds.length}`,
-    bannerIdParam && (bannerInfo?.title || "Bộ sưu tập banner"),
+    isBannerCollection && (bannerInfo?.title || "Bộ sưu tập banner"),
     isPromotionPage && "Đang khuyến mãi",
   ].filter(Boolean);
 
@@ -743,7 +822,7 @@ export default function SearchPage() {
     activePromotionByProductId,
   ]);
 
-  const showSearchSidebar = !bannerIdParam && !productIdsParam;
+  const showSearchSidebar = !isBannerCollection && !productIdsParam;
 
   const sidebarBaseProducts = useMemo(() => {
     return products.filter((product) => {
@@ -868,8 +947,96 @@ export default function SearchPage() {
     sortParam,
   ]);
 
+  const quickFilterPills = useMemo(() => {
+    const baseProducts = isBannerCollection ? bannerProducts : displayedProducts;
+
+    const flashSaleCount = baseProducts.filter((product) =>
+      Boolean(getFlashSaleItemForProduct(product.id)),
+    ).length;
+
+    const dealCount = baseProducts.filter((product) => {
+      const priceInfo = getEffectiveSearchPrice(product);
+
+      return priceInfo.priceSource !== "REGULAR";
+    }).length;
+
+    const bestSellerCount = baseProducts.filter(
+      (product) => Number(product.soldQuantity || product.sold || 0) > 0,
+    ).length;
+
+    const inStockCount = baseProducts.filter(
+      (product) => Number(product.stock || 0) > 0,
+    ).length;
+
+    return [
+      {
+        key: "all",
+        label: "Tất cả",
+        count: baseProducts.length,
+        active: !dealParam && !stockParam && sortParam !== "sold-desc",
+        onClick: () =>
+          updateSearchParams({
+            deal: "",
+            stock: "",
+            sort: "",
+          }),
+      },
+      {
+        key: "flash",
+        label: "Flash Sale",
+        count: flashSaleCount,
+        active: dealParam === "flash-sale",
+        onClick: () =>
+          updateSearchParams({
+            deal: dealParam === "flash-sale" ? "" : "flash-sale",
+          }),
+      },
+      {
+        key: "deal",
+        label: "Đang giảm giá",
+        count: dealCount,
+        active: dealParam === "active",
+        onClick: () =>
+          updateSearchParams({
+            deal: dealParam === "active" ? "" : "active",
+          }),
+      },
+      {
+        key: "best-seller",
+        label: "Bán chạy",
+        count: bestSellerCount,
+        active: sortParam === "sold-desc",
+        onClick: () =>
+          updateSearchParams({
+            sort: sortParam === "sold-desc" ? "" : "sold-desc",
+          }),
+      },
+      {
+        key: "stock",
+        label: "Còn hàng",
+        count: inStockCount,
+        active: stockParam === "in-stock",
+        onClick: () =>
+          updateSearchParams({
+            stock: stockParam === "in-stock" ? "" : "in-stock",
+          }),
+      },
+    ];
+  }, [
+    isBannerCollection,
+    bannerProducts,
+    displayedProducts,
+    activeFlashSale,
+    activePromotions,
+    dealParam,
+    stockParam,
+    sortParam,
+  ]);
+
+  const showCollectionTools = Boolean(isBannerCollection || productIdsParam);
+
   const getResultDescription = () => {
-    if (bannerIdParam) {
+    if (isBannerCollection) {
       return (
         <>
           Sản phẩm thuộc chương trình:
@@ -912,7 +1079,7 @@ export default function SearchPage() {
   };
 
   const getPageTitle = () => {
-    if (bannerIdParam) {
+    if (isBannerCollection) {
       return bannerInfo?.title || "Bộ sưu tập sản phẩm nổi bật";
     }
 
@@ -928,7 +1095,7 @@ export default function SearchPage() {
   };
 
   const getPageSubtitle = () => {
-    if (bannerIdParam) {
+    if (isBannerCollection) {
       return (
         bannerInfo?.subtitle ||
         "Khám phá những sản phẩm được ElectroShop chọn lọc riêng cho chương trình này."
@@ -956,7 +1123,7 @@ export default function SearchPage() {
         <span>›</span>
 
         <strong>
-          {bannerIdParam
+          {isBannerCollection
             ? "Bộ sưu tập"
             : isPromotionPage
               ? "Khuyến mãi"
@@ -964,7 +1131,7 @@ export default function SearchPage() {
         </strong>
       </div>
 
-      {bannerIdParam && loadingBanner && (
+      {isBannerCollection && loadingBanner && (
         <section className="search-banner-hero search-banner-loading">
           <div className="search-skeleton-line wide"></div>
           <div className="search-skeleton-line medium"></div>
@@ -972,7 +1139,7 @@ export default function SearchPage() {
         </section>
       )}
 
-      {bannerIdParam && !loadingBanner && (
+      {isBannerCollection && !loadingBanner && (
         <section className="search-banner-hero">
           {bannerInfo?.imageUrl && (
             <img
@@ -983,12 +1150,34 @@ export default function SearchPage() {
         </section>
       )}
 
+      {isBannerCollection && !loadingBanner && (
+        <section className="search-collection-summary">
+          <div>
+            <span>ElectroShop Collection</span>
+            <h1>{bannerInfo?.title || "Bộ sưu tập nổi bật"}</h1>
+            <p>
+              {bannerInfo?.subtitle ||
+                "Những sản phẩm được chọn lọc riêng cho chương trình ưu đãi này."}
+            </p>
+          </div>
+
+          <div className="search-collection-metrics">
+            {searchHeroStats.slice(0, 3).map((stat) => (
+              <span key={stat.key}>
+                <strong>{stat.value}</strong>
+                <small>{stat.label}</small>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="search-result-wrapper">
         <div className="search-result-title">
           <div className="search-result-title-left">
             <div className="search-result-kicker-row">
               <span className="search-result-badge">
-              {bannerIdParam
+              {isBannerCollection
                 ? "Bộ sưu tập nổi bật"
                 : productIdsParam
                   ? "Collection từ ElectroShop"
@@ -1032,6 +1221,23 @@ export default function SearchPage() {
             )}
           </div>
         </div>
+
+        {showCollectionTools && !isSearchLoading && displayedProducts.length > 0 && (
+          <div className="search-quick-filter-pills">
+            {quickFilterPills.map((pill) => (
+              <button
+                key={pill.key}
+                type="button"
+                className={pill.active ? "active" : ""}
+                disabled={pill.count === 0}
+                onClick={pill.onClick}
+              >
+                <span>{pill.label}</span>
+                <strong>{pill.count}</strong>
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="search-filter-bar">
           <div className="search-filter-summary">
@@ -1253,6 +1459,17 @@ export default function SearchPage() {
                       Còn {displayedProducts.length - visibleProductCount} sản
                       phẩm chưa hiển thị
                     </span>
+
+                    <div
+                      className="search-load-progress"
+                      aria-hidden="true"
+                    >
+                      <span
+                        style={{
+                          width: `${visibleProgressPercent}%`,
+                        }}
+                      ></span>
+                    </div>
                   </div>
                 )}
               </>
@@ -1263,7 +1480,7 @@ export default function SearchPage() {
                 <h3>Không tìm thấy sản phẩm phù hợp</h3>
 
                 <p>
-                  {bannerIdParam
+                  {isBannerCollection
                     ? "Banner này chưa được gắn sản phẩm. Hãy vào Admin → Trang chủ → Quản lý banner để chọn sản phẩm."
                     : "Hãy thử tìm bằng tên sản phẩm, danh mục, thương hiệu hoặc khoảng giá khác."}
                 </p>
@@ -1271,7 +1488,7 @@ export default function SearchPage() {
                 <div className="search-empty-actions">
                   <Link to="/">Về trang chủ</Link>
 
-                  {!bannerIdParam && (
+                  {!isBannerCollection && (
                     <Link to="/search?page=promotion">Xem khuyến mãi</Link>
                   )}
                 </div>

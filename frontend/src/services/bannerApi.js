@@ -32,6 +32,20 @@ export const updateBanner = async (id, banner) => {
   return response.data;
 };
 
+export const getBannerDetail = async (id) => {
+  const response = await axios.get(`${API_URL}/${id}/detail`);
+
+  return response.data;
+};
+
+export const setBannerProducts = async (id, productIds) => {
+  const response = await axios.post(`${API_URL}/${id}/products`, {
+    productIds,
+  });
+
+  return response.data;
+};
+
 export const deleteBanner = async (id) => {
   const response = await axios.delete(`${API_URL}/${id}`);
 
