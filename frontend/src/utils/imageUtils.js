@@ -5,19 +5,23 @@ export const getImageUrl = (image) => {
     return "";
   }
 
-  // Nếu đã là link online hoặc link localhost đầy đủ
+  const normalizedImage = String(image).trim();
+
   if (
-    image.startsWith("http://") ||
-    image.startsWith("https://")
+    normalizedImage.startsWith("http://") ||
+    normalizedImage.startsWith("https://") ||
+    normalizedImage.startsWith("data:")
   ) {
-    return image;
+    return normalizedImage;
   }
 
-  // Nếu ảnh đã có /uploads/
-  if (image.startsWith("/uploads/")) {
-    return `${API_URL}${image}`;
+  if (normalizedImage.startsWith("//")) {
+    return `https:${normalizedImage}`;
   }
 
-  // Nếu chỉ là tên file
-  return `${API_URL}/uploads/${image}`;
+  if (normalizedImage.startsWith("/uploads/")) {
+    return `${API_URL}${normalizedImage}`;
+  }
+
+  return `${API_URL}/uploads/${normalizedImage}`;
 };

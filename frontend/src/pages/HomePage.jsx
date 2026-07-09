@@ -14,8 +14,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { getProducts } from "../services/productApi";
 
-import { getReviewSummary } from "../services/reviewApi";
-
 import { getCategories } from "../services/categoryApi";
 
 import { getBrands } from "../services/brandApi";
@@ -644,10 +642,6 @@ export default function HomePage() {
 
       const productList = Array.isArray(data) ? data : [];
 
-      /*
-       * Hiển thị sản phẩm ngay sau khi lấy được danh sách.
-       * Không chờ API đánh giá nữa, nên ảnh sản phẩm hiện nhanh hơn.
-       */
       const quickProducts = productList.map((product) => ({
         ...product,
         averageRating: Number(product.averageRating || 0),
@@ -657,33 +651,6 @@ export default function HomePage() {
       setProducts(quickProducts);
       patchHomePageCache({
         products: quickProducts,
-      });
-
-      /*
-       * Sau đó mới tải đánh giá ở nền.
-       * Khi tải xong thì cập nhật sao/rating, ảnh không bị delay nữa.
-       */
-      const productsWithRating = await Promise.all(
-        quickProducts.map(async (product) => {
-          try {
-            const summary = await getReviewSummary(product.id);
-
-            return {
-              ...product,
-              averageRating: Number(summary?.averageRating || 0),
-              totalReviews: Number(summary?.totalReviews || 0),
-            };
-          } catch (error) {
-            console.log("Không thể tải đánh giá sản phẩm:", product.id, error);
-
-            return product;
-          }
-        }),
-      );
-
-      setProducts(productsWithRating);
-      patchHomePageCache({
-        products: productsWithRating,
       });
     } catch (error) {
       console.log(error);

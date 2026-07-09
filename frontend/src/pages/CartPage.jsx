@@ -1,7 +1,7 @@
 import "./CartPage.css";
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -15,6 +15,7 @@ import {
 } from "../utils/cartUtils";
 
 import { applyCoupon } from "../services/couponApi";
+import { getImageUrl } from "../utils/imageUtils";
 
 export default function CartPage() {
   const toast = useToast();
@@ -24,6 +25,8 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
 
   const [selectedCartKeys, setSelectedCartKeys] = useState([]);
+
+  const [imageFallbackIndexes, setImageFallbackIndexes] = useState({});
 
   const [couponCode, setCouponCode] = useState("");
 
@@ -56,6 +59,46 @@ export default function CartPage() {
     const selectedOptionsText = JSON.stringify(item.selectedOptions || {});
 
     return item.cartKey || `${productId}-${selectedOptionsText}`;
+  };
+
+  const getCartItemImages = (item) => {
+    const candidates = [
+      item.image,
+      item.imageUrl,
+      item.thumbnail,
+      item.thumbnailUrl,
+      item.productImage,
+      item.productImageUrl,
+      ...(Array.isArray(item.images)
+        ? item.images.flatMap((image) => [
+            image?.imageUrl,
+            image?.url,
+            image?.image,
+          ])
+        : []),
+    ]
+      .map((image) => (image ? String(image).trim() : ""))
+      .filter(Boolean);
+
+    return [...new Set(candidates)];
+  };
+
+  const handleCartImageError = (itemKey, imageCount) => {
+    setImageFallbackIndexes((currentIndexes) => {
+      const currentIndex = Number(currentIndexes[itemKey] || 0);
+
+      if (currentIndex + 1 >= imageCount) {
+        return {
+          ...currentIndexes,
+          [itemKey]: imageCount,
+        };
+      }
+
+      return {
+        ...currentIndexes,
+        [itemKey]: currentIndex + 1,
+      };
+    });
   };
 
   const convertPriceToNumber = (price) => {
@@ -117,6 +160,10 @@ export default function CartPage() {
   const selectedCartItems = cartItems.filter((item) =>
     selectedCartKeys.includes(getItemKey(item)),
   );
+
+  const cartTotalQuantity = cartItems.reduce((total, item) => {
+    return total + Number(item.quantity || 1);
+  }, 0);
 
   const isAllSelected =
     cartItems.length > 0 && selectedCartKeys.length === cartItems.length;
@@ -278,7 +325,11 @@ export default function CartPage() {
         <div className="cart-container-pro">
           <div className="cart-heading">
             <div>
-              <span className="cart-breadcrumb">Trang chủ / Giỏ hàng</span>
+              <div className="cart-breadcrumb">
+                <Link to="/">Trang chủ</Link>
+                <span className="cart-breadcrumb-separator">/</span>
+                <span aria-current="page">Giỏ hàng</span>
+              </div>
 
               <h1>Giỏ hàng của bạn</h1>
 
@@ -291,7 +342,7 @@ export default function CartPage() {
               <span>🛒</span>
 
               <div>
-                <strong>{cartItems.length}</strong>
+                <strong>{cartTotalQuantity}</strong>
 
                 <p>Sản phẩm trong giỏ</p>
               </div>
@@ -323,8 +374,8 @@ export default function CartPage() {
                     <h2>Sản phẩm đã chọn</h2>
 
                     <p>
-                      Đã chọn {totalQuantity} sản phẩm / Tổng {cartItems.length}{" "}
-                      sản phẩm
+                      Đã chọn {totalQuantity} sản phẩm / Tổng{" "}
+                      {cartTotalQuantity} sản phẩm
                     </p>
 
                     <label className="cart-select-all-row">
@@ -354,6 +405,11 @@ export default function CartPage() {
                     const itemQuantity = Number(item.quantity || 1);
 
                     const itemTotal = itemPrice * itemQuantity;
+                    const itemImages = getCartItemImages(item);
+                    const itemImageIndex = Number(
+                      imageFallbackIndexes[itemKey] || 0,
+                    );
+                    const itemImage = itemImages[itemImageIndex] || "";
 
                     return (
                       <article
@@ -366,7 +422,19 @@ export default function CartPage() {
                         onClick={() => handleOpenProductDetail(item)}
                       >
                         <div className="cart-product-image-box">
-                          <img src={item.image} alt={item.name} />
+                          {itemImage ? (
+                            <img
+                              src={getImageUrl(itemImage)}
+                              alt={item.name || "Sản phẩm"}
+                              onError={() =>
+                                handleCartImageError(itemKey, itemImages.length)
+                              }
+                            />
+                          ) : (
+                            <div className="cart-product-image-placeholder">
+                              ES
+                            </div>
+                          )}
                         </div>
 
                         <div className="cart-product-info">

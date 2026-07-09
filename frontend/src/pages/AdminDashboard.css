@@ -1122,6 +1122,122 @@
   font-weight: 950 !important;
 }
 
+.admin-order-quick-filters {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 8px;
+  overflow-x: auto;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  background: #ffffff;
+  scrollbar-width: none;
+}
+
+.admin-order-quick-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-order-quick-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-order-quick-filters button.active,
+.admin-order-quick-filters button:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #0f4aa4;
+}
+
+.admin-order-quick-filters span {
+  min-width: 24px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f4aa4;
+  font-size: 12px;
+  text-align: center;
+}
+
+.admin-orders-table .admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.admin-orders-table .admin-status-badge.confirmed,
+.admin-orders-table .admin-status-badge.preparing {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.admin-orders-table .admin-status-badge.shipping {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.admin-orders-table .admin-status-badge.completed,
+.admin-orders-table .admin-status-badge.paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.admin-orders-table .admin-status-badge.cancelled,
+.admin-orders-table .admin-status-badge.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-orders-table .admin-status-badge.refunded {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.admin-order-status-cell {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-order-mini-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  width: 112px;
+}
+
+.admin-order-mini-timeline span {
+  height: 5px;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.admin-order-mini-timeline span.active {
+  background: #2563eb;
+}
+
+.admin-order-mini-timeline.cancelled span:first-child {
+  background: #ef4444;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

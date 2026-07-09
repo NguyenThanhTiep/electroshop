@@ -15,6 +15,11 @@ public interface ReviewRepository
             Long productId
     );
 
+    List<Review>
+    findByProductIdIn(
+            List<Long> productIds
+    );
+
     Optional<Review>
     findByProductIdAndUserId(
             Long productId,

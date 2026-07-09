@@ -951,6 +951,16 @@
   white-space: nowrap;
 }
 
+.overview-stock-item b.warning {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.overview-stock-item b.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .overview-empty {
   margin: 0;
   padding: 28px;

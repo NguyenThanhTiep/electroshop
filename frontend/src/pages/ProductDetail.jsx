@@ -12,7 +12,7 @@ import Footer from "../components/Footer";
 
 import Header from "../components/Header";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Link,
@@ -23,16 +23,19 @@ import {
 
 import { addToCart, saveBuyNowItem } from "../utils/cartUtils";
 
-import { getProductById, getProducts } from "../services/productApi";
+import { getProductById } from "../services/productApi";
 
 import {
   getActiveFlashSaleProduct,
-  getActiveFlashSales,
 } from "../services/flashSaleApi";
 
-import { getActivePromotions } from "../services/promotionApi";
-
 import { getReviewSummary } from "../services/reviewApi";
+
+import {
+  getCachedActiveFlashSales,
+  getCachedActivePromotions,
+  getCachedProducts,
+} from "../utils/productDetailCache";
 
 const RELATED_FILTERS = [
   {
@@ -59,6 +62,12 @@ const RELATED_FILTERS = [
 
 const RELATED_PRICE_GAP_RATIO = 0.25;
 
+const DEFAULT_REVIEW_SUMMARY = {
+  averageRating: 0,
+  totalReviews: 0,
+  ratingCounts: {},
+};
+
 export default function ProductDetail() {
   const toast = useToast();
 
@@ -69,15 +78,15 @@ export default function ProductDetail() {
   const [searchParams] = useSearchParams();
   const [product, setProduct] = useState({});
 
+  const [productLoading, setProductLoading] = useState(true);
+
+  const [relatedLoading, setRelatedLoading] = useState(false);
+
   const [activeFlashSaleProduct, setActiveFlashSaleProduct] = useState(null);
 
   const [activePromotion, setActivePromotion] = useState(null);
 
-  const [reviewSummary, setReviewSummary] = useState({
-    averageRating: 0,
-    totalReviews: 0,
-    ratingCounts: {},
-  });
+  const [reviewSummary, setReviewSummary] = useState(DEFAULT_REVIEW_SUMMARY);
 
   const [activePromotions, setActivePromotions] = useState([]);
 
@@ -88,10 +97,6 @@ export default function ProductDetail() {
   const [relatedProducts, setRelatedProducts] = useState([]);
 
   const [relatedFilter, setRelatedFilter] = useState("ALL");
-
-  const [relatedScrollProgress, setRelatedScrollProgress] = useState(0);
-
-  const relatedSliderRef = useRef(null);
 
   const [showFullscreen, setShowFullscreen] = useState(false);
 
@@ -438,59 +443,9 @@ export default function ProductDetail() {
     isRelatedProductVisible(item, relatedFilter),
   );
 
-  const updateRelatedScrollProgress = () => {
-    const slider = relatedSliderRef.current;
-
-    if (!slider) {
-      setRelatedScrollProgress(0);
-      return;
-    }
-
-    const maxScrollLeft = slider.scrollWidth - slider.clientWidth;
-
-    if (maxScrollLeft <= 0) {
-      setRelatedScrollProgress(100);
-      return;
-    }
-
-    const nextProgress = (slider.scrollLeft / maxScrollLeft) * 100;
-
-    setRelatedScrollProgress(Math.max(0, Math.min(100, nextProgress)));
-  };
-
-  const scrollRelatedProducts = (direction) => {
-    const slider = relatedSliderRef.current;
-
-    if (!slider) {
-      return;
-    }
-
-    slider.scrollBy({
-      left: slider.clientWidth * 0.9 * direction,
-      behavior: "smooth",
-    });
-  };
-
   const handleRelatedFilterChange = (filterType) => {
     setRelatedFilter(filterType);
-
-    window.requestAnimationFrame(() => {
-      relatedSliderRef.current?.scrollTo({
-        left: 0,
-        behavior: "smooth",
-      });
-    });
   };
-
-  useEffect(() => {
-    window.requestAnimationFrame(updateRelatedScrollProgress);
-
-    window.addEventListener("resize", updateRelatedScrollProgress);
-
-    return () => {
-      window.removeEventListener("resize", updateRelatedScrollProgress);
-    };
-  }, [filteredRelatedProducts.length, relatedFilter]);
 
   const calculateRegularPrice = () => {
     const basePrice = convertPriceToNumber(product.price);
@@ -606,7 +561,111 @@ export default function ProductDetail() {
   /* FETCH PRODUCT */
 
   useEffect(() => {
+    let cancelled = false;
+
+    const getSettledValue = (result, fallback) =>
+      result.status === "fulfilled" ? result.value : fallback;
+
+    const fetchProduct = async () => {
+      setProductLoading(true);
+      setRelatedLoading(true);
+      setProduct({});
+      setSelectedImage("");
+      setQuantity(1);
+      setThumbStart(0);
+      setSelectedOptions({});
+      setShowAllOptions(false);
+      setActiveFlashSaleProduct(null);
+      setActivePromotion(null);
+      setActivePromotions([]);
+      setActiveFlashSales([]);
+      setRelatedProducts([]);
+      setReviewSummary(DEFAULT_REVIEW_SUMMARY);
+
+      try {
+        const productData = await getProductById(id);
+
+        if (cancelled) {
+          return;
+        }
+
+        setProduct(productData);
+        setSelectedImage(getImageUrl(productData.image));
+        setQuantity(1);
+        setThumbStart(0);
+        setSelectedOptions({});
+        setReviewSummary({
+          ...DEFAULT_REVIEW_SUMMARY,
+          averageRating: Number(productData.averageRating || 0),
+          totalReviews: Number(productData.totalReviews || 0),
+        });
+        setProductLoading(false);
+
+        const [
+          flashSaleResult,
+          promotionsResult,
+          flashSalesResult,
+          reviewSummaryResult,
+          productsResult,
+        ] = await Promise.allSettled([
+          getActiveFlashSaleProduct(id),
+          getCachedActivePromotions(),
+          getCachedActiveFlashSales(),
+          getReviewSummary(id),
+          getCachedProducts(),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const promotionData = getSettledValue(promotionsResult, []);
+        const activeFlashSaleList = getSettledValue(flashSalesResult, []);
+        const allProducts = getSettledValue(productsResult, []);
+
+        setActiveFlashSaleProduct(getSettledValue(flashSaleResult, null));
+        setActivePromotion(
+          findActivePromotion(
+            Array.isArray(promotionData) ? promotionData : [],
+            productData.id,
+          ),
+        );
+        setActivePromotions(Array.isArray(promotionData) ? promotionData : []);
+        setActiveFlashSales(
+          Array.isArray(activeFlashSaleList) ? activeFlashSaleList : [],
+        );
+        setReviewSummary(
+          getSettledValue(reviewSummaryResult, DEFAULT_REVIEW_SUMMARY) ||
+            DEFAULT_REVIEW_SUMMARY,
+        );
+        setRelatedProducts(buildRelatedProducts(productData, allProducts));
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Khong the tai san pham:", error);
+
+        setProduct({});
+        setActiveFlashSaleProduct(null);
+        setActivePromotion(null);
+        setReviewSummary(DEFAULT_REVIEW_SUMMARY);
+        setActivePromotions([]);
+        setActiveFlashSales([]);
+        setRelatedProducts([]);
+      } finally {
+        if (!cancelled) {
+          setProductLoading(false);
+          setRelatedLoading(false);
+        }
+      }
+    };
+
     fetchProduct();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -626,79 +685,6 @@ export default function ProductDetail() {
 
     setSelectedOptions(defaultSelectedOptions);
   }, [product.options]);
-
-  const fetchProduct = async () => {
-    try {
-      const [
-        productData,
-        flashSaleData,
-        promotionData,
-        activeFlashSaleList,
-        reviewSummaryData,
-        allProducts,
-      ] =
-        await Promise.all([
-          getProductById(id),
-
-          getActiveFlashSaleProduct(id),
-
-          getActivePromotions(),
-
-          getActiveFlashSales(),
-
-          getReviewSummary(id).catch(() => ({
-            averageRating: 0,
-            totalReviews: 0,
-            ratingCounts: {},
-          })),
-
-          getProducts(),
-        ]);
-
-      setProduct(productData);
-
-      setActiveFlashSaleProduct(flashSaleData || null);
-
-      setActivePromotion(
-        findActivePromotion(
-          Array.isArray(promotionData) ? promotionData : [],
-          productData.id,
-        ),
-      );
-
-      setActivePromotions(Array.isArray(promotionData) ? promotionData : []);
-      setActiveFlashSales(
-        Array.isArray(activeFlashSaleList) ? activeFlashSaleList : [],
-      );
-
-      setReviewSummary(
-        reviewSummaryData || {
-          averageRating: 0,
-          totalReviews: 0,
-          ratingCounts: {},
-        },
-      );
-
-      setSelectedImage(getImageUrl(productData.image));
-
-      setQuantity(1);
-      setThumbStart(0);
-
-      setRelatedProducts(buildRelatedProducts(productData, allProducts));
-    } catch (error) {
-      console.error("Không thể tải sản phẩm:", error);
-
-      setActiveFlashSaleProduct(null);
-      setActivePromotion(null);
-      setReviewSummary({
-        averageRating: 0,
-        totalReviews: 0,
-        ratingCounts: {},
-      });
-      setActivePromotions([]);
-      setActiveFlashSales([]);
-    }
-  };
 
   const buildCartProduct = () => {
     const cartProduct = {
@@ -892,12 +878,16 @@ export default function ProductDetail() {
             {/* MAIN IMAGE */}
 
             <div className="main-image">
-              {selectedImage && (
+              {productLoading ? (
+                <div className="product-image-skeleton" aria-hidden="true" />
+              ) : selectedImage ? (
                 <img
                   src={selectedImage}
                   alt={product.name}
                   onClick={() => setShowFullscreen(true)}
                 />
+              ) : (
+                null
               )}
             </div>
 
@@ -959,7 +949,7 @@ export default function ProductDetail() {
           {/* CENTER INFO */}
 
           <div className="product-detail-info">
-            <h1>{product.name}</h1>
+            <h1>{productLoading ? "Đang tải sản phẩm..." : product.name}</h1>
 
             <div className="product-brand-row">
               <span>Thương hiệu: {product.brand || "ElectroShop"}</span>
@@ -1390,7 +1380,7 @@ export default function ProductDetail() {
 
         {/* RELATED PRODUCTS */}
 
-        {relatedProducts.length > 0 && (
+        {(relatedLoading || relatedProducts.length > 0) && (
           <div className="related-section">
             <div className="related-section-head">
               <div className="section-header">
@@ -1421,25 +1411,14 @@ export default function ProductDetail() {
             </div>
 
             <div className="slider-wrapper">
-              {/* LEFT BUTTON */}
-
-              <button
-                type="button"
-                aria-label="Xem sản phẩm tương tự phía trước"
-                className="slider-btn left"
-                onClick={() => scrollRelatedProducts(-1)}
-              >
-                ❮
-              </button>
-
-              {/* RELATED SLIDER */}
-
-              {filteredRelatedProducts.length > 0 ? (
-                <div
-                  className="related-slider"
-                  ref={relatedSliderRef}
-                  onScroll={updateRelatedScrollProgress}
-                >
+              {relatedLoading ? (
+                <div className="related-skeleton-grid" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div className="related-card-skeleton" key={index} />
+                  ))}
+                </div>
+              ) : filteredRelatedProducts.length > 0 ? (
+                <div className="related-slider">
                   {filteredRelatedProducts.map((item) => {
                     const reasonBadges = getRelatedReasonBadges(item);
 
@@ -1467,28 +1446,7 @@ export default function ProductDetail() {
                   Chưa có sản phẩm phù hợp với bộ lọc này.
                 </div>
               )}
-
-              {/* RIGHT BUTTON */}
-
-              <button
-                type="button"
-                aria-label="Xem thêm sản phẩm tương tự"
-                className="slider-btn right"
-                onClick={() => scrollRelatedProducts(1)}
-              >
-                ❯
-              </button>
             </div>
-
-            {filteredRelatedProducts.length > 0 && (
-              <div className="related-carousel-progress" aria-hidden="true">
-                <span
-                  style={{
-                    width: `${Math.max(10, relatedScrollProgress)}%`,
-                  }}
-                />
-              </div>
-            )}
           </div>
         )}
       </div>

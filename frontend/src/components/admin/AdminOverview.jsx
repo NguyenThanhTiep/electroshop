@@ -390,12 +390,26 @@ export default function AdminOverview({
     const lowStockProducts = safeProducts
       .filter((item) => Number(item.stock || 0) > 0)
       .filter((item) => Number(item.stock || 0) <= 5)
-      .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0))
-      .slice(0, 6);
+      .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
+
+    const lowStockPreviewProducts = lowStockProducts.slice(0, 6);
 
     const outOfStockProducts = safeProducts.filter(
       (item) => Number(item.stock || 0) <= 0,
     );
+
+    const inventoryAlertProducts = [
+      ...outOfStockProducts.map((item) => ({
+        ...item,
+        alertLabel: "Hết hàng",
+        alertLevel: "danger",
+      })),
+      ...lowStockPreviewProducts.map((item) => ({
+        ...item,
+        alertLabel: `Còn ${Number(item.stock || 0)}`,
+        alertLevel: "warning",
+      })),
+    ].slice(0, 6);
 
     const totalSoldQuantity = safeProducts.reduce(
       (sum, item) => sum + Number(item.soldQuantity || 0),
@@ -437,14 +451,16 @@ export default function AdminOverview({
       .filter((item) => Number(item.stock || 0) > 0)
       .filter((item) => Number(item.stock || 0) <= 5)
       .filter((item) => Number(item.soldQuantity || 0) >= 5)
-      .sort((a, b) => Number(b.soldQuantity || 0) - Number(a.soldQuantity || 0))
-      .slice(0, 5);
+      .sort((a, b) => Number(b.soldQuantity || 0) - Number(a.soldQuantity || 0));
+
+    const hotLowStockPreviewProducts = hotLowStockProducts.slice(0, 5);
 
     const slowHighStockProducts = safeProducts
       .filter((item) => Number(item.stock || 0) >= 50)
       .filter((item) => Number(item.soldQuantity || 0) <= 2)
-      .sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0))
-      .slice(0, 5);
+      .sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0));
+
+    const slowHighStockPreviewProducts = slowHighStockProducts.slice(0, 5);
 
     const inventoryGroups = [
       {
@@ -641,8 +657,11 @@ export default function AdminOverview({
       },
     ].filter((item) => Number(item.value || 0) > 0);
 
-    const maxOrderStatusValue = Math.max(
-      ...orderStatusOverview.map((item) => item.value),
+    const totalOrderStatusValue = Math.max(
+      orderStatusOverview.reduce(
+        (sum, item) => sum + Number(item.value || 0),
+        0,
+      ),
       1,
     );
 
@@ -659,6 +678,7 @@ export default function AdminOverview({
       cancelledOrders,
       waitingPaymentOrders,
       lowStockProducts,
+      inventoryAlertProducts,
       outOfStockProducts,
       totalSoldQuantity,
       activePromotionCount,
@@ -669,7 +689,7 @@ export default function AdminOverview({
       averageOrderValue,
       orderStatusOverview,
       recentOrders,
-      maxOrderStatusValue,
+      totalOrderStatusValue,
       products: safeProducts,
       rangedUsers,
       previousUsers,
@@ -694,8 +714,8 @@ export default function AdminOverview({
       orderTrend: getTrend(rangedOrders.length, previousOrders.length),
       topSellingProducts,
       inventoryGroups,
-      hotLowStockProducts,
-      slowHighStockProducts,
+      hotLowStockProducts: hotLowStockPreviewProducts,
+      slowHighStockProducts: slowHighStockPreviewProducts,
       endingSoonCampaigns,
       activeFlashSaleList,
       topDiscountProducts,
@@ -1085,7 +1105,8 @@ export default function AdminOverview({
                     className={`overview-progress-bar ${status.className}`}
                     style={{
                       width: `${
-                        (status.value / overviewData.maxOrderStatusValue) * 100
+                        (status.value / overviewData.totalOrderStatusValue) *
+                        100
                       }%`,
                     }}
                   />
@@ -1229,10 +1250,10 @@ export default function AdminOverview({
           </div>
 
           <div className="overview-stock-list">
-            {overviewData.lowStockProducts.length === 0 ? (
+            {overviewData.inventoryAlertProducts.length === 0 ? (
               <p className="overview-empty">Tồn kho hiện đang ổn định.</p>
             ) : (
-              overviewData.lowStockProducts.map((item) => (
+              overviewData.inventoryAlertProducts.map((item) => (
                 <div className="overview-stock-item" key={item.id}>
                   <div>
                     <strong>{item.name}</strong>
@@ -1243,7 +1264,7 @@ export default function AdminOverview({
                     </span>
                   </div>
 
-                  <b>Còn {item.stock}</b>
+                  <b className={item.alertLevel}>{item.alertLabel}</b>
                 </div>
               ))
             )}

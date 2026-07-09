@@ -124,6 +124,69 @@ const PAYMENT_METHOD_LABELS = {
   VNPAY: "VNPAY",
 };
 
+const ADMIN_ORDER_QUICK_FILTERS = [
+  {
+    value: "ALL",
+    label: "Tất cả",
+    matcher: () => true,
+  },
+  {
+    value: "PENDING_CONFIRMATION",
+    label: "Chờ xác nhận",
+    matcher: (order) => order.orderStatus === "PENDING_CONFIRMATION",
+  },
+  {
+    value: "CONFIRMED",
+    label: "Đã xác nhận",
+    matcher: (order) => order.orderStatus === "CONFIRMED",
+  },
+  {
+    value: "PREPARING",
+    label: "Đang chuẩn bị",
+    matcher: (order) => order.orderStatus === "PREPARING",
+  },
+  {
+    value: "SHIPPING",
+    label: "Đang giao",
+    matcher: (order) => order.orderStatus === "SHIPPING",
+  },
+  {
+    value: "COMPLETED",
+    label: "Hoàn thành",
+    matcher: (order) => order.orderStatus === "COMPLETED",
+  },
+  {
+    value: "CANCELLED",
+    label: "Đã hủy",
+    matcher: (order) => order.orderStatus === "CANCELLED",
+  },
+];
+
+const getAdminStatusClass = (status) =>
+  String(status || "")
+    .toLowerCase()
+    .replaceAll("_", "-");
+
+const getAdminOrderTimelineIndex = (status) => {
+  if (status === "CANCELLED") {
+    return -1;
+  }
+
+  if (status === "COMPLETED") {
+    return 3;
+  }
+
+  if (status === "SHIPPING") {
+    return 2;
+  }
+
+  if (["CONFIRMED", "PREPARING"].includes(status)) {
+    return 1;
+  }
+
+  return 0;
+};
+
 const ADMIN_MENU_INFO = {
   overview: {
     icon: "📊",
@@ -4119,6 +4182,9 @@ export default function AdminDashboard() {
   const filteredOrders = orders
     .filter((order) => {
       const keyword = normalizeText(orderSearchKeyword);
+      const orderItemNames = Array.isArray(order.items)
+        ? order.items.map((item) => item.productName || "").join(" ")
+        : "";
 
       const matchesKeyword =
         !keyword ||
@@ -4126,6 +4192,7 @@ export default function AdminDashboard() {
         normalizeText(order.customerName).includes(keyword) ||
         normalizeText(order.phone).includes(keyword) ||
         normalizeText(order.email).includes(keyword) ||
+        normalizeText(orderItemNames).includes(keyword) ||
         normalizeText(order.id).includes(keyword);
 
       const matchesOrderStatus =
@@ -7996,12 +8063,36 @@ export default function AdminDashboard() {
               </select>
             </div>
 
+            <div className="admin-order-quick-filters">
+              {ADMIN_ORDER_QUICK_FILTERS.map((filter) => {
+                const count = orders.filter((order) =>
+                  filter.matcher(order),
+                ).length;
+                const isActive = orderStatusFilter === filter.value;
+
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    className={isActive ? "active" : ""}
+                    onClick={() => {
+                      setOrderStatusFilter(filter.value);
+                      setOrderPage(1);
+                    }}
+                  >
+                    {filter.label}
+                    <span>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <p className="admin-result-count">
               Hiển thị {paginatedOrders.length} / {filteredOrders.length} đơn
               hàng
             </p>
 
-            <table>
+            <table className="admin-orders-table">
               <thead>
                 <tr>
                   <th>Mã đơn</th>
@@ -8022,12 +8113,26 @@ export default function AdminDashboard() {
 
               <tbody>
                 {paginatedOrders.length > 0 ? (
-                  paginatedOrders.map((order) => (
-                    <tr
-                      key={order.id}
-                      className="admin-order-row"
-                      onClick={() => handleOpenOrderDetail(order)}
-                    >
+                  paginatedOrders.map((order) => {
+                    const orderClass = getAdminStatusClass(order.orderStatus);
+                    const paymentClass = getAdminStatusClass(
+                      order.paymentStatus,
+                    );
+                    const timelineActiveIndex = getAdminOrderTimelineIndex(
+                      order.orderStatus,
+                    );
+                    const isCancelledOrder = order.orderStatus === "CANCELLED";
+                    const selectableStatuses = [
+                      order.orderStatus,
+                      ...getAvailableOrderStatuses(order.orderStatus),
+                    ].filter(Boolean);
+
+                    return (
+                      <tr
+                        key={order.id}
+                        className="admin-order-row"
+                        onClick={() => handleOpenOrderDetail(order)}
+                      >
                       <td>{order.orderCode || `#${order.id}`}</td>
 
                       <td>
@@ -8045,9 +8150,43 @@ export default function AdminDashboard() {
 
                       <td>{order.paymentMethod || "Chưa cập nhật"}</td>
 
-                      <td>{order.paymentStatus || "Chưa cập nhật"}</td>
+                      <td>
+                        <span className={`admin-status-badge ${paymentClass}`}>
+                          {PAYMENT_STATUS_LABELS[order.paymentStatus] ||
+                            order.paymentStatus ||
+                            "Chưa cập nhật"}
+                        </span>
+                      </td>
 
-                      <td>{order.orderStatus || "Chưa cập nhật"}</td>
+                      <td>
+                        <div className="admin-order-status-cell">
+                          <span className={`admin-status-badge ${orderClass}`}>
+                            {ORDER_STATUS_LABELS[order.orderStatus] ||
+                              order.orderStatus ||
+                              "Chưa cập nhật"}
+                          </span>
+
+                          <div
+                            className={
+                              isCancelledOrder
+                                ? "admin-order-mini-timeline cancelled"
+                                : "admin-order-mini-timeline"
+                            }
+                          >
+                            {[0, 1, 2, 3].map((step) => (
+                              <span
+                                key={step}
+                                className={
+                                  !isCancelledOrder &&
+                                  step <= timelineActiveIndex
+                                    ? "active"
+                                    : ""
+                                }
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </td>
 
                       <td onClick={(event) => event.stopPropagation()}>
                         <select
@@ -8056,28 +8195,18 @@ export default function AdminDashboard() {
                           onChange={(event) =>
                             handleUpdateStatus(order.id, event.target.value)
                           }
+                          disabled={selectableStatuses.length <= 1}
                         >
-                          <option value="WAITING_PAYMENT">
-                            Chờ thanh toán
-                          </option>
-
-                          <option value="PENDING_CONFIRMATION">
-                            Chờ xác nhận
-                          </option>
-
-                          <option value="CONFIRMED">Đã xác nhận</option>
-
-                          <option value="PREPARING">Đang chuẩn bị</option>
-
-                          <option value="SHIPPING">Đang giao hàng</option>
-
-                          <option value="COMPLETED">Hoàn thành</option>
-
-                          <option value="CANCELLED">Đã hủy</option>
+                          {selectableStatuses.map((status) => (
+                            <option key={status} value={status}>
+                              {ORDER_STATUS_LABELS[status] || status}
+                            </option>
+                          ))}
                         </select>
                       </td>
-                    </tr>
-                  ))
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td

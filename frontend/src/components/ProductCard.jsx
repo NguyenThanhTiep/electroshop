@@ -8,6 +8,10 @@ import { useToast } from "./common/ToastProvider";
 
 export default function ProductCard({ product }) {
   const toast = useToast();
+  const averageRating = Number(product?.averageRating || 0);
+  const totalReviews = Number(product?.totalReviews || 0);
+  const hasRating = totalReviews > 0 && averageRating > 0;
+  const ratingText = averageRating.toFixed(1).replace(".0", "");
 
   return (
     <Link to={`/product/${product.id}`} className="product-link">
@@ -30,7 +34,9 @@ export default function ProductCard({ product }) {
         <div className="product-info">
           <h3>{product.name}</h3>
 
-          <div className="rating">⭐⭐⭐⭐⭐</div>
+          <div className="rating">
+            {hasRating ? `⭐ ${ratingText} (${totalReviews})` : "⭐ Chưa có"}
+          </div>
 
           <p className="price">
             {Number(product.price).toLocaleString("vi-VN")}đ

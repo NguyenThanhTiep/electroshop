@@ -1,5 +1,6 @@
 package com.example.electroshop.controller;
 
+import com.example.electroshop.dto.ProductResponse;
 import com.example.electroshop.entity.Product;
 import com.example.electroshop.service.ProductService;
 
@@ -22,14 +23,14 @@ public class ProductController {
 
     // GET ALL
     @GetMapping
-    public List<Product> getAllProducts() {
+    public List<ProductResponse> getAllProducts() {
 
         return productService.getAllProducts();
     }
 
     // GET BY ID
     @GetMapping("/{id}")
-    public Product getProductById(
+    public ProductResponse getProductById(
             @PathVariable Long id
     ) {
 
