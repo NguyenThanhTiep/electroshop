@@ -27,23 +27,23 @@ const formatDate = (value) => {
   return new Date(value).toLocaleString("vi-VN");
 };
 
-const renderRatingStars = (value) => {
-  const rating = Math.max(0, Math.min(5, Number(value || 0)));
-  const filledPercent = `${(rating / 5) * 100}%`;
+const RatingStars = ({ value, className = "" }) => {
+  const safeRating = Math.max(0, Math.min(5, Number(value || 0)));
+  const fillPercent = `${(safeRating / 5) * 100}%`;
 
   return (
     <span
-      className="review-rating-stars"
-      aria-label={`${rating.toFixed(1)} trên 5 sao`}
-      title={`${rating.toFixed(1)} / 5`}
+      className={`rating-stars ${className}`}
+      aria-label={`${safeRating.toFixed(1)} trên 5 sao`}
     >
-      <span className="review-stars-empty" aria-hidden="true">
+      <span className="rating-stars-empty" aria-hidden="true">
         ★★★★★
       </span>
+
       <span
-        className="review-stars-filled"
+        className="rating-stars-filled"
         style={{
-          width: filledPercent,
+          width: fillPercent,
         }}
         aria-hidden="true"
       >
@@ -209,7 +209,10 @@ export default function ProductReviews({ productId, onSummaryChange }) {
           <strong>{Number(summary.averageRating || 0).toFixed(1)}</strong>
 
           <div className="review-summary-stars">
-            {renderRatingStars(summary.averageRating)}
+            <RatingStars
+              value={summary.averageRating}
+              className="review-summary-rating-stars"
+            />
           </div>
 
           <span>{summary.totalReviews || 0} đánh giá</span>
@@ -301,7 +304,10 @@ export default function ProductReviews({ productId, onSummaryChange }) {
               </div>
 
               <div className="review-card-stars">
-                {renderRatingStars(review.rating)}
+                <RatingStars
+                  value={review.rating}
+                  className="review-card-rating-stars"
+                />
               </div>
 
               <p>{review.comment}</p>
