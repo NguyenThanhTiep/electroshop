@@ -26,8 +26,6 @@ export default function CartPage() {
 
   const [selectedCartKeys, setSelectedCartKeys] = useState([]);
 
-  const [imageFallbackIndexes, setImageFallbackIndexes] = useState({});
-
   const [couponCode, setCouponCode] = useState("");
 
   const [couponResult, setCouponResult] = useState(null);
@@ -61,44 +59,22 @@ export default function CartPage() {
     return item.cartKey || `${productId}-${selectedOptionsText}`;
   };
 
-  const getCartItemImages = (item) => {
-    const candidates = [
-      item.image,
-      item.imageUrl,
-      item.thumbnail,
-      item.thumbnailUrl,
-      item.productImage,
-      item.productImageUrl,
-      ...(Array.isArray(item.images)
-        ? item.images.flatMap((image) => [
-            image?.imageUrl,
-            image?.url,
-            image?.image,
-          ])
-        : []),
-    ]
-      .map((image) => (image ? String(image).trim() : ""))
-      .filter(Boolean);
+  const getCartItemImageUrl = (item) => {
+    const firstSubImage = item?.images?.[0];
 
-    return [...new Set(candidates)];
-  };
+    const rawImage =
+      item?.image ||
+      item?.productImage ||
+      (typeof firstSubImage === "string"
+        ? firstSubImage
+        : firstSubImage?.imageUrl) ||
+      "";
 
-  const handleCartImageError = (itemKey, imageCount) => {
-    setImageFallbackIndexes((currentIndexes) => {
-      const currentIndex = Number(currentIndexes[itemKey] || 0);
+    if (!rawImage) {
+      return "/images/no-image.png";
+    }
 
-      if (currentIndex + 1 >= imageCount) {
-        return {
-          ...currentIndexes,
-          [itemKey]: imageCount,
-        };
-      }
-
-      return {
-        ...currentIndexes,
-        [itemKey]: currentIndex + 1,
-      };
-    });
+    return getImageUrl(rawImage);
   };
 
   const convertPriceToNumber = (price) => {
@@ -405,12 +381,6 @@ export default function CartPage() {
                     const itemQuantity = Number(item.quantity || 1);
 
                     const itemTotal = itemPrice * itemQuantity;
-                    const itemImages = getCartItemImages(item);
-                    const itemImageIndex = Number(
-                      imageFallbackIndexes[itemKey] || 0,
-                    );
-                    const itemImage = itemImages[itemImageIndex] || "";
-
                     return (
                       <article
                         className={
@@ -422,19 +392,14 @@ export default function CartPage() {
                         onClick={() => handleOpenProductDetail(item)}
                       >
                         <div className="cart-product-image-box">
-                          {itemImage ? (
-                            <img
-                              src={getImageUrl(itemImage)}
-                              alt={item.name || "Sản phẩm"}
-                              onError={() =>
-                                handleCartImageError(itemKey, itemImages.length)
-                              }
-                            />
-                          ) : (
-                            <div className="cart-product-image-placeholder">
-                              ES
-                            </div>
-                          )}
+                          <img
+                            src={getCartItemImageUrl(item)}
+                            alt={item.name || "Ảnh sản phẩm"}
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = "/images/no-image.png";
+                            }}
+                          />
                         </div>
 
                         <div className="cart-product-info">
