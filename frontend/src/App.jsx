@@ -1,6 +1,7 @@
 import "./App.css";
 
-import { Routes, Route } from "react-router-dom";
+import { useLayoutEffect } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 import HomePage from "./pages/HomePage";
 import CartPage from "./pages/CartPage";
@@ -17,9 +18,34 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PaymentResultPage from "./pages/PaymentResultPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
+function ScrollToPageTop() {
+  const location = useLocation();
+
+  const scrollKey =
+    location.pathname === "/search"
+      ? `${location.pathname}${location.search}`
+      : location.pathname;
+
+  useLayoutEffect(() => {
+    if (location.pathname === "/") {
+      return;
+    }
+
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, [location.pathname, scrollKey]);
+
+  return null;
+}
+
 function App() {
   return (
     <div className="app">
+      <ScrollToPageTop />
+
       <Routes>
         <Route path="/" element={<HomePage />} />
 

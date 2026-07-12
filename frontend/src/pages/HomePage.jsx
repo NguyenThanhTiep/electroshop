@@ -89,6 +89,8 @@ const preloadImages = (imageUrls = []) => {
 
 function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isBannerNavHidden, setIsBannerNavHidden] = useState(false);
+  const bannerNavHideTimerRef = useRef(null);
 
   const activeBanners = Array.isArray(banners)
     ? banners.filter((banner) => banner.active !== false)
@@ -137,14 +139,29 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
     return () => clearInterval(timer);
   }, [section.autoSlide, section.slideInterval, totalSlides]);
 
+  useEffect(() => {
+    return () => clearTimeout(bannerNavHideTimerRef.current);
+  }, []);
+
+  const hideBannerNavBriefly = () => {
+    clearTimeout(bannerNavHideTimerRef.current);
+    setIsBannerNavHidden(true);
+
+    bannerNavHideTimerRef.current = setTimeout(() => {
+      setIsBannerNavHidden(false);
+    }, 240);
+  };
+
   const goPrev = (e) => {
     e.stopPropagation();
+    hideBannerNavBriefly();
 
     setActiveIndex((prev) => (prev === 0 ? totalSlides - 1 : prev - 1));
   };
 
   const goNext = (e) => {
     e.stopPropagation();
+    hideBannerNavBriefly();
 
     setActiveIndex((prev) => (prev >= totalSlides - 1 ? 0 : prev + 1));
   };
@@ -157,7 +174,11 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
     const currentGroup = groupedSlides[activeIndex] || [];
 
     return (
-      <section className="deal-section deal-banner-only-section">
+      <section
+        className={`deal-section deal-banner-only-section ${
+          isBannerNavHidden ? "is-banner-nav-hidden" : ""
+        }`}
+      >
         {currentGroup.slice(0, 3).map((banner) => (
           <div
             key={banner.id}
@@ -209,7 +230,11 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
     }
 
     return (
-      <section className="home-dynamic-banner-section banner-large-section">
+      <section
+        className={`home-dynamic-banner-section banner-large-section ${
+          isBannerNavHidden ? "is-banner-nav-hidden" : ""
+        }`}
+      >
         <div className="home-banner-section-header">
           <h2>{section.title}</h2>
         </div>
@@ -284,7 +309,11 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
       currentGroup[1];
 
     return (
-      <section className="home-dynamic-banner-section double-banner-section">
+      <section
+        className={`home-dynamic-banner-section double-banner-section ${
+          isBannerNavHidden ? "is-banner-nav-hidden" : ""
+        }`}
+      >
         <div className="home-banner-section-header">
           <h2>{section.title}</h2>
         </div>
@@ -339,7 +368,11 @@ function HomeDynamicBannerSection({ section, banners, onBannerClick }) {
     const currentGroup = groupedSlides[activeIndex] || [];
 
     return (
-      <section className="home-dynamic-banner-section product-banner-section">
+      <section
+        className={`home-dynamic-banner-section product-banner-section ${
+          isBannerNavHidden ? "is-banner-nav-hidden" : ""
+        }`}
+      >
         <div className="home-banner-section-header">
           <h2>{section.title}</h2>
         </div>
@@ -459,6 +492,8 @@ export default function HomePage() {
   );
 
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [isTopBannerNavHidden, setIsTopBannerNavHidden] = useState(false);
+  const topBannerNavHideTimerRef = useRef(null);
 
   const [homeSections, setHomeSections] = useState(
     cachedHomePage?.homeSections || [],
@@ -1279,10 +1314,25 @@ export default function HomePage() {
 
   const activeBanner = topBanners[activeBannerIndex];
 
+  useEffect(() => {
+    return () => clearTimeout(topBannerNavHideTimerRef.current);
+  }, []);
+
+  const hideTopBannerNavBriefly = () => {
+    clearTimeout(topBannerNavHideTimerRef.current);
+    setIsTopBannerNavHidden(true);
+
+    topBannerNavHideTimerRef.current = setTimeout(() => {
+      setIsTopBannerNavHidden(false);
+    }, 240);
+  };
+
   const handlePrevBanner = () => {
     if (topBanners.length === 0) {
       return;
     }
+
+    hideTopBannerNavBriefly();
 
     setActiveBannerIndex((prevIndex) =>
       prevIndex === 0 ? topBanners.length - 1 : prevIndex - 1,
@@ -1293,6 +1343,8 @@ export default function HomePage() {
     if (topBanners.length === 0) {
       return;
     }
+
+    hideTopBannerNavBriefly();
 
     setActiveBannerIndex((prevIndex) =>
       prevIndex === topBanners.length - 1 ? 0 : prevIndex + 1,
@@ -1605,7 +1657,9 @@ export default function HomePage() {
         <div className="hero-right">
           {topBanners.length > 0 && activeBanner ? (
             <section
-              className="home-top-banner-card"
+              className={`home-top-banner-card ${
+                isTopBannerNavHidden ? "is-banner-nav-hidden" : ""
+              }`}
               onClick={() => handleTopBannerClick(activeBanner)}
             >
               <img

@@ -50,6 +50,9 @@ public class CheckoutService {
     private static final BigDecimal DEFAULT_SHIPPING_FEE =
             new BigDecimal("30000");
 
+    private static final BigDecimal PRICE_ROUNDING_UNIT =
+            new BigDecimal("1000");
+
     private final ObjectMapper objectMapper =
             new ObjectMapper();
 
@@ -540,9 +543,11 @@ public class CheckoutService {
             Integer requestedQuantity
     ) {
         BigDecimal regularPrice =
-                resolveRegularPriceWithOptions(
-                        product,
-                        selectedOptionsJson
+                roundPriceToNearestThousand(
+                        resolveRegularPriceWithOptions(
+                                product,
+                                selectedOptionsJson
+                        )
                 );
 
         int quantity =
@@ -566,17 +571,19 @@ public class CheckoutService {
                     discountPercent < 100
             ) {
                 BigDecimal flashSalePrice =
-                        regularPrice
-                                .multiply(
-                                        BigDecimal.valueOf(
-                                                100 - discountPercent
+                        roundPriceToNearestThousand(
+                                regularPrice
+                                        .multiply(
+                                                BigDecimal.valueOf(
+                                                        100 - discountPercent
+                                                )
                                         )
-                                )
-                                .divide(
-                                        BigDecimal.valueOf(100),
-                                        2,
-                                        RoundingMode.HALF_UP
-                                );
+                                        .divide(
+                                                BigDecimal.valueOf(100),
+                                                2,
+                                                RoundingMode.HALF_UP
+                                        )
+                        );
 
                 return new ResolvedCheckoutPrice(
                         flashSalePrice,
@@ -588,13 +595,15 @@ public class CheckoutService {
             BigDecimal salePrice =
                     flashSaleItem.getSalePrice();
 
+            BigDecimal roundedSalePrice =
+                    roundPriceToNearestThousand(salePrice);
+
             if (
-                    salePrice != null &&
-                    salePrice.compareTo(BigDecimal.ZERO) > 0 &&
-                    salePrice.compareTo(regularPrice) < 0
+                    roundedSalePrice.compareTo(BigDecimal.ZERO) > 0 &&
+                    roundedSalePrice.compareTo(regularPrice) < 0
             ) {
                 return new ResolvedCheckoutPrice(
-                        salePrice,
+                        roundedSalePrice,
                         "FLASH_SALE",
                         flashSaleItem
                 );
@@ -623,16 +632,18 @@ public class CheckoutService {
                     );
 
             BigDecimal promotionPrice =
-                    regularPrice
-                            .multiply(
-                                    BigDecimal.valueOf(100)
-                                            .subtract(discountPercent)
-                            )
-                            .divide(
-                                    BigDecimal.valueOf(100),
-                                    2,
-                                    RoundingMode.HALF_UP
-                            );
+                    roundPriceToNearestThousand(
+                            regularPrice
+                                    .multiply(
+                                            BigDecimal.valueOf(100)
+                                                    .subtract(discountPercent)
+                                    )
+                                    .divide(
+                                            BigDecimal.valueOf(100),
+                                            2,
+                                            RoundingMode.HALF_UP
+                                    )
+                    );
 
             return new ResolvedCheckoutPrice(
                     promotionPrice,
@@ -808,6 +819,25 @@ public class CheckoutService {
         }
 
         return new BigDecimal(normalized);
+    }
+
+    private BigDecimal roundPriceToNearestThousand(
+            BigDecimal price
+    ) {
+        if (
+                price == null ||
+                price.compareTo(BigDecimal.ZERO) <= 0
+        ) {
+            return BigDecimal.ZERO;
+        }
+
+        return price
+                .divide(
+                        PRICE_ROUNDING_UNIT,
+                        0,
+                        RoundingMode.HALF_UP
+                )
+                .multiply(PRICE_ROUNDING_UNIT);
     }
 
     private BigDecimal calculateShippingFee(

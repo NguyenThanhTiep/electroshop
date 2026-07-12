@@ -156,8 +156,18 @@ export default function ProductDetail() {
     return Number(String(price).replace(/\D/g, "")) || 0;
   };
 
+  const roundPriceToNearestThousand = (price) => {
+    const numberValue = convertPriceToNumber(price);
+
+    if (numberValue <= 0) {
+      return 0;
+    }
+
+    return Math.round(numberValue / 1000) * 1000;
+  };
+
   const formatPrice = (price) => {
-    return convertPriceToNumber(price).toLocaleString("vi-VN") + "đ";
+    return roundPriceToNearestThousand(price).toLocaleString("vi-VN") + "đ";
   };
 
   const normalizeComparableText = (value) =>
@@ -521,6 +531,8 @@ export default function ProductDetail() {
     priceSource = "PROMOTION";
   }
 
+  finalPrice = roundPriceToNearestThousand(finalPrice);
+
   const discountPercent =
     priceSource === "FLASH_SALE"
       ? Number(activeFlashSaleProduct?.discountPercent || 0)
@@ -528,7 +540,10 @@ export default function ProductDetail() {
         ? promotionPercent
         : 0;
 
-  const savedAmount = Math.max(0, regularPrice - finalPrice);
+  const savedAmount = Math.max(
+    0,
+    roundPriceToNearestThousand(regularPrice) - finalPrice,
+  );
 
   const displaySoldQuantity =
     priceSource === "FLASH_SALE"
@@ -1059,12 +1074,12 @@ export default function ProductDetail() {
               <div className="market-price-row">
                 <span>Giá thị trường:</span>
 
-                <del>{Number(finalPrice * 1.15).toLocaleString("vi-VN")}đ</del>
+                <del>{formatPrice(finalPrice * 1.15)}</del>
 
                 <span>Tiết kiệm:</span>
 
                 <strong>
-                  {Number(finalPrice * 0.15).toLocaleString("vi-VN")}đ
+                  {formatPrice(finalPrice * 0.15)}
                 </strong>
               </div>
             )}
@@ -1234,9 +1249,7 @@ export default function ProductDetail() {
                     <div>
                       <p>{item.name}</p>
 
-                      <strong>
-                        {Number(item.price || 0).toLocaleString("vi-VN")}đ
-                      </strong>
+                      <strong>{formatPrice(item.price)}</strong>
                     </div>
                   </Link>
                 ))}

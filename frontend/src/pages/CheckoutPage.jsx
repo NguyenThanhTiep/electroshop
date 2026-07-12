@@ -35,16 +35,26 @@ const convertPriceToNumber = (price) => {
   return Number(String(price).replace(/\D/g, "")) || 0;
 };
 
+const roundPriceToNearestThousand = (price) => {
+  const numberValue = convertPriceToNumber(price);
+
+  if (numberValue <= 0) {
+    return 0;
+  }
+
+  return Math.round(numberValue / 1000) * 1000;
+};
+
 const formatPrice = (price) => {
   return convertPriceToNumber(price).toLocaleString("vi-VN") + "đ";
 };
 
 const getCartItemPrice = (item) => {
   if (item.isFlashSale && item.flashSalePrice) {
-    return convertPriceToNumber(item.flashSalePrice);
+    return roundPriceToNearestThousand(item.flashSalePrice);
   }
 
-  return convertPriceToNumber(item.price);
+  return roundPriceToNearestThousand(item.price);
 };
 
 const getSelectedOptionsText = (selectedOptions) => {

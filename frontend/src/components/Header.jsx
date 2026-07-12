@@ -558,14 +558,16 @@ export default function Header() {
 
           <Link to="/cart">
             <div className="header-item cart-header-item">
-              <ShoppingCart size={24} />
+              <span className="cart-header-icon">
+                <ShoppingCart size={24} />
+
+                <em>{cartCount}</em>
+              </span>
 
               <div>
                 <span>Giỏ hàng</span>
                 <small>Sản phẩm</small>
               </div>
-
-              <em>{cartCount}</em>
             </div>
           </Link>
         </div>
