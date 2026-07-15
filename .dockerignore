@@ -1,0 +1,14 @@
+.git
+.gitignore
+.vscode
+.agents
+target
+frontend/node_modules
+frontend/dist
+node_modules
+dist
+uploads
+*.log
+.env
+.env.local
+Mo_ta_cac_bang_CSDL_ElectroShop.docx

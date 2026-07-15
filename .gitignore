@@ -5,7 +5,7 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 
 # Uploads
-uploads/
+# uploads/
 
 # Environment
 .env
