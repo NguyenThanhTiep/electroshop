@@ -9,16 +9,25 @@ Can cai:
 - Docker Desktop
 - Docker Compose
 
-Neu chi chay web local, khong can tao `.env`. Chay truc tiep:
+Vi ngrok duoc tich hop chay cung Docker Compose, can tao `.env` truoc khi chay:
 
 ```powershell
-docker compose up --build
+copy .env.vnpay.example .env
 ```
 
-Chi can tao `.env` khi muon cau hinh VNPAY/ngrok hoac doi cong frontend/backend:
+Dien toi thieu cac bien ngrok:
 
-```powershell
-copy .env.docker.example .env
+```env
+PUBLIC_BASE_URL=https://posting-prissy-elevate.ngrok-free.dev
+NGROK_AUTHTOKEN=AUTHTOKEN_NGROK_CUA_BAN
+NGROK_DOMAIN=posting-prissy-elevate.ngrok-free.dev
+```
+
+Neu demo VNPAY, dien them:
+
+```env
+VNPAY_TMN_CODE=TMN_CODE_VNPAY_CAP
+VNPAY_HASH_SECRET=HASH_SECRET_VNPAY_CAP
 ```
 
 ## 2. Chay BE, FE va MySQL
@@ -31,6 +40,7 @@ Sau khi chay xong:
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8080
+- Ngrok: https://posting-prissy-elevate.ngrok-free.dev
 - MySQL chay noi bo trong Docker voi service name `db`
 
 Tai khoan admin mac dinh:
@@ -75,25 +85,48 @@ Thu muc anh upload duoc mount vao container backend:
 
 Neu database dump co duong dan anh trong `uploads`, hay copy kem thu muc `uploads` sang may chay Docker de anh san pham/banner hien dung.
 
-## 4. Chay kem ngrok cho VNPAY
+## 4. Chay VNPAY voi ngrok tich hop trong Docker
 
-VNPAY can Return URL/IPN truy cap duoc tu internet. Cach on dinh nhat la dung static domain cua ngrok.
+VNPAY can Return URL/IPN truy cap duoc tu internet. Du an da cau hinh service `ngrok` trong Docker Compose, nen chi can chay Docker la ngrok cung chay theo.
+
+Tao file `.env` tu file mau:
+
+```powershell
+copy .env.vnpay.example .env
+```
 
 Trong file `.env`, dien:
 
 ```env
 VNPAY_TMN_CODE=TMN_CODE_VNPAY_CAP
 VNPAY_HASH_SECRET=HASH_SECRET_VNPAY_CAP
-NGROK_AUTHTOKEN=AUTHTOKEN_NGROK_CUA_BAN
-NGROK_DOMAIN=your-domain.ngrok-free.app
-PUBLIC_BASE_URL=https://your-domain.ngrok-free.app
+PUBLIC_BASE_URL=https://posting-prissy-elevate.ngrok-free.dev
 FRONTEND_URL=http://localhost:5173
+NGROK_AUTHTOKEN=AUTHTOKEN_NGROK_CUA_BAN
+NGROK_DOMAIN=posting-prissy-elevate.ngrok-free.dev
 ```
 
-Chay day du profile ngrok:
+Chay du an:
 
 ```powershell
-docker compose --profile ngrok up --build
+docker compose up --build
+```
+
+Luu y:
+
+- `PUBLIC_BASE_URL` phai dung dung domain ngrok.
+- `NGROK_DOMAIN` phai trung voi domain trong `PUBLIC_BASE_URL`.
+- Service ngrok se tu tro vao backend container cong `8080`.
+- Khong commit `.env` vi co secret VNPAY.
+
+Thong tin the test VNPAY Sandbox:
+
+```text
+Ngan hang: NCB
+So the: 9704198526191432198
+Ten chu the: NGUYEN VAN A
+Ngay phat hanh: 07/15
+Ma OTP: 123456
 ```
 
 Ngrok dashboard:

@@ -60,15 +60,13 @@ services:
     image: ngrok/ngrok:latest
     container_name: electroshop-ngrok
     restart: unless-stopped
-    profiles:
-      - ngrok
     depends_on:
       - backend
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
     command:
       - http
-      - --url=${NGROK_DOMAIN:-}
+      - --url=${NGROK_DOMAIN:-posting-prissy-elevate.ngrok-free.dev}
       - backend:8080
     ports:
       - "${NGROK_DASHBOARD_PORT:-4040}:4040"
